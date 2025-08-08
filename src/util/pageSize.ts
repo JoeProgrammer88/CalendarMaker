@@ -1,4 +1,4 @@
-import { PAGE_SIZES, CalendarPageSizeKey, Orientation } from '../types.ts';
+import { PAGE_SIZES, CalendarPageSizeKey, Orientation } from '../types';
 
 export function computePagePixelSize(key: CalendarPageSizeKey, orientation: Orientation, dpi: number) {
   const def = PAGE_SIZES[key];

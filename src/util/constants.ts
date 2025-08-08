@@ -1,4 +1,4 @@
-import type { LayoutDef, LayoutId } from '../types.ts';
+import type { LayoutDef, LayoutId } from '../types';
 
 export const SIZES = {
   '5x7': true,

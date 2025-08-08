@@ -1,4 +1,4 @@
-import type { ProjectState, LayoutId } from '../types.ts';
+import type { ProjectState, LayoutId } from '../types';
 
 const DEFAULT_LAYOUT: LayoutId = 'single-top';
 

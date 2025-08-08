@@ -1,6 +1,6 @@
-import { LAYOUTS } from './constants.ts';
-import type { LayoutId, LayoutDef } from '../types.ts';
+import { LAYOUTS } from './constants';
+import type { LayoutId, LayoutDef } from '../types';
 
 export function getLayoutById(id: LayoutId): LayoutDef | undefined {
-  return LAYOUTS.find(l => l.id === id);
+  return LAYOUTS.find((l: LayoutDef) => l.id === id);
 }

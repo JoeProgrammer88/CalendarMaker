@@ -1,8 +1,8 @@
 import React from 'react';
-import { Sidebar } from './components/Sidebar.tsx';
-import { PagePreview } from './components/PagePreview.tsx';
-import { RightPanel } from './components/RightPanel.tsx';
-import { useCalendarStore } from '../store/store.ts';
+import { Sidebar } from './components/Sidebar';
+import { PagePreview } from './components/PagePreview';
+import { RightPanel } from './components/RightPanel';
+import { useCalendarStore } from '../store/store';
 
 export const App: React.FC = () => {
   const dark = useCalendarStore(s => s.ui.darkMode);

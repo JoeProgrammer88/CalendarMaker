@@ -1,7 +1,7 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
-import type { ProjectState } from '../types.ts';
-import { computePagePixelSize } from './pageSize.ts';
-import { getLayoutById } from './layouts.ts';
+import type { ProjectState } from '../types';
+import { computePagePixelSize } from './pageSize';
+import { getLayoutById } from './layouts';
 
 export async function exportAsPdf(project: ProjectState) {
   const pdf = await PDFDocument.create();
@@ -19,7 +19,7 @@ export async function exportAsPdf(project: ProjectState) {
     page.drawText(monthLabel, { x: 40, y: height - 50, size: 24, font, color: rgb(0,0,0) });
 
     // Draw slot outlines
-    layout.slots.forEach(slot => {
+    layout.slots.forEach((slot) => {
       const x = slot.rect.x * width;
       const y = height - (slot.rect.y * height) - (slot.rect.h * height);
       const w = slot.rect.w * width;

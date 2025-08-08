@@ -1,6 +1,6 @@
 import React from 'react';
-import { useCalendarStore } from '../../store/store.ts';
-import { FONT_OPTIONS } from '../../util/constants.ts';
+import { useCalendarStore } from '../../store/store';
+import { FONT_OPTIONS } from '../../util/constants';
 
 export const RightPanel: React.FC = () => {
   const { fontFamily, setFontFamily } = useCalendarStore(s => ({
