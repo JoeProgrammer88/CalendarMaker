@@ -245,12 +245,12 @@ Rendering scales rects to pixel canvas size.
 10. Changing font updates preview within <150ms and export uses selected font.  
 
 ## 18. Milestones
-1. Foundation: Project scaffold, layout registry (single + multi-slot), calendar generator (Week 1).  
-2. Photo Upload & Multi-Slot Transform Preview (Week 2).  
-3. Events, Holidays Toggle & Grid Rendering (Week 3).  
-4. Export (PNG then PDF) (Week 4).  
-5. Persistence + Undo/Redo + Layout switching migrations (Week 5).  
-6. PWA + Polish + Accessibility & QA (Week 6).  
+1. Foundation: Project scaffold, layout registry (single + multi-slot), calendar generator (Week 1). [Done]
+2. Photo Upload & Multi-Slot Transform Preview (Week 2). [Done]
+3. Events, Holidays Toggle & Grid Rendering (Week 3). [Partial] — Month grid rendering is implemented; Events UI and Holidays toggle pending.
+4. Export (PNG then PDF) (Week 4). [Partial] — Basic PDF export with placeholder outlines; full rendering of photos/text at print DPI pending.
+5. Persistence + Undo/Redo + Layout switching migrations (Week 5). [Pending]
+6. PWA + Polish + Accessibility & QA (Week 6). [Pending]
 
 ## 19. Risks & Mitigations
 | Risk | Impact | Mitigation |
@@ -268,6 +268,38 @@ Rendering scales rects to pixel canvas size.
 - Non-destructive Crop: Transform stored separately; original image unchanged.  
 - Slot: An individual photo placement rectangle within a layout.  
 - Font Subsetting: Including only required glyphs to reduce file size.  
+
+## 21. Current Implementation Status (as of 2025-08-08)
+
+- Completed
+  - Project scaffold (Vite + React + TypeScript + Tailwind + Zustand)
+  - Layout registry with multi-photo templates (single, dual, triple, quad, full-bleed)
+  - Page size & orientation selection (5×7, Letter, A4, 11×17, 13×19)
+  - Light/Dark UI theme toggle
+  - Font selection UI (wired to state)
+  - Photo upload library, thumbnails, per-slot assignment
+  - Non-destructive transforms UI per slot (zoom, pan, rotate, reset)
+  - Month grid generation and preview rendering
+  - Basic PDF export (placeholder layout outlines)
+
+- Underway
+  - Export refinement: render real calendar text and photos at high DPI; embed fonts
+  - Hook selected font into grid/labels for preview and export
+
+- Pending
+  - Events: CRUD UI, storage, and rendering in day cells (truncate with tooltip)
+  - Week numbers toggle rendering in grid
+  - Yearly overview page and optional US Federal holidays (+ New Year’s Eve) injection
+  - Persistence: IndexedDB for blobs + project JSON; autosave/restore; migrations
+  - Caption field per month (under photo area)
+  - Resolution warnings for low-res images (stretch goal)
+  - Accessibility polish (ARIA, focus), keyboard shortcuts
+  - PWA: service worker, manifest, offline shell
+
+- How to resume next time
+  1) Implement Events UI and render events in day cells (use existing EventItem type)
+  2) Integrate week numbers toggle and selected font into grid rendering
+  3) Start export renderer: draw real grid text and placed photos to a 300 DPI canvas, then embed into PDF
 
 ---
 End of Specification.
