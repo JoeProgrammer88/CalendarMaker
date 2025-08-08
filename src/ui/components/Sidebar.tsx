@@ -44,6 +44,38 @@ export const Sidebar: React.FC = () => {
           </select>
         </label>
       </div>
+      <div className="p-3 font-semibold uppercase tracking-wide text-xs text-gray-500">Photos</div>
+      <div className="px-3 pb-4 space-y-2">
+        <PhotoUploader />
+        <PhotoList />
+      </div>
     </aside>
+  );
+};
+
+const PhotoUploader: React.FC = () => {
+  const addPhotos = useCalendarStore(s => s.actions.addPhotos);
+  return (
+    <label className="block text-xs font-medium cursor-pointer">
+      <span className="block mb-1">Add Photos</span>
+      <input type="file" accept="image/*" multiple className="hidden" onChange={e => { if (e.target.files) addPhotos(e.target.files); e.target.value=''; }} />
+      <div className="border border-dashed border-gray-400 dark:border-gray-600 rounded p-2 text-center text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-900">Click to choose</div>
+    </label>
+  );
+};
+
+const PhotoList: React.FC = () => {
+  const photos = useCalendarStore(s => s.project.photos);
+  const assign = useCalendarStore(s => s.actions.assignPhotoToActiveSlot);
+  return (
+    <div className="grid grid-cols-3 gap-2 max-h-40 overflow-auto">
+      {photos.map(p => (
+        <button key={p.id} onClick={() => assign(p.id)} className="relative group border border-gray-300 dark:border-gray-600 rounded overflow-hidden aspect-square bg-gray-100 dark:bg-gray-700">
+          {p.previewUrl ? <img src={p.previewUrl} alt={p.name} className="object-cover w-full h-full" /> : <span className="text-[10px] p-1">{p.name}</span>}
+          <span className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 text-white text-[10px] flex items-center justify-center transition">Assign</span>
+        </button>
+      ))}
+      {photos.length === 0 && <div className="col-span-3 text-[11px] text-gray-500">No photos yet.</div>}
+    </div>
   );
 };
