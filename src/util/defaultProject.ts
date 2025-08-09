@@ -19,6 +19,8 @@ export function defaultProject(): ProjectState {
       showWeekNumbers: false,
       showCommonHolidays: false,
   includeYearlyOverview: false,
+  includeCoverPage: false,
+  coverStyle: 'large-photo',
       fontFamily: 'Inter'
     },
     photos: [],

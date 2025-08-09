@@ -12,6 +12,8 @@ export const Sidebar: React.FC = () => {
   startYear: s.project.calendar.startYear,
   showWeekNumbers: s.project.calendar.showWeekNumbers,
   includeYearlyOverview: s.project.calendar.includeYearlyOverview ?? false,
+  includeCoverPage: s.project.calendar.includeCoverPage ?? false,
+  coverStyle: s.project.calendar.coverStyle ?? 'large-photo',
   showCommonHolidays: s.project.calendar.showCommonHolidays,
     monthIndex: s.ui.activeMonth,
     layout: s.project.calendar.layoutStylePerMonth[s.ui.activeMonth],
@@ -24,6 +26,8 @@ export const Sidebar: React.FC = () => {
   setShowWeekNumbers: s.actions.setShowWeekNumbers,
   setShowCommonHolidays: s.actions.setShowCommonHolidays,
   setIncludeYearlyOverview: s.actions.setIncludeYearlyOverview,
+  setIncludeCoverPage: s.actions.setIncludeCoverPage,
+  setCoverStyle: s.actions.setCoverStyle,
     setLayoutForMonth: s.actions.setLayoutForMonth,
     setActiveMonth: s.actions.setActiveMonth,
   resetProject: s.actions.resetProject,
@@ -105,6 +109,21 @@ export const Sidebar: React.FC = () => {
           <input type="checkbox" checked={state.includeYearlyOverview} onChange={e => state.setIncludeYearlyOverview(e.target.checked)} />
           Include yearly overview
         </label>
+        <div className="space-y-1">
+          <label className="inline-flex items-center gap-2 text-xs">
+            <input type="checkbox" checked={state.includeCoverPage} onChange={e => state.setIncludeCoverPage(e.target.checked)} />
+            Include cover page
+          </label>
+          {state.includeCoverPage && (
+            <label className="block">
+              <span className="text-xs font-medium">Cover Style</span>
+              <select value={state.coverStyle} onChange={e => state.setCoverStyle(e.target.value as any)} className="mt-1 w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded px-2 py-1">
+                <option value="large-photo">Large Photo (90%)</option>
+                <option value="grid-4x3">4×3 Month Grid</option>
+              </select>
+            </label>
+          )}
+        </div>
         <label className="inline-flex items-center gap-2 text-xs">
           <input type="checkbox" checked={state.showCommonHolidays} onChange={e => state.setShowCommonHolidays(e.target.checked)} />
           Show common holidays (overview)

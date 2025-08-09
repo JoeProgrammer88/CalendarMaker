@@ -59,8 +59,114 @@ function getCommonHolidays(year: number): Record<string, string> {
 export async function exportAsPdf(project: ProjectState, onProgress?: (p: number) => void) {
   const pdf = await PDFDocument.create();
   const font = await pdf.embedFont(pickStandardFontName(project.calendar.fontFamily));
-  const totalPages = project.calendar.months + (project.calendar.includeYearlyOverview ? 1 : 0);
+  const hasCover = !!project.calendar.includeCoverPage;
+  const totalPages = project.calendar.months + (project.calendar.includeYearlyOverview ? 1 : 0) + (hasCover ? 1 : 0);
   let pageCounter = 0;
+
+  // Optional Cover Page
+  if (hasCover) {
+    const { pageSize, orientation } = project.calendar;
+    const pt = computePagePixelSize(pageSize, orientation, 72);
+    const page = pdf.addPage([pt.width, pt.height]);
+    const { width, height } = page.getSize();
+    const margin = 36;
+    const infoH = height * 0.10;
+    const photoH = height - infoH;
+    const startMonth = project.calendar.startMonth;
+    const startYear = project.calendar.startYear;
+    const endOffset = startMonth + project.calendar.months - 1;
+    const endMonth0 = endOffset % 12;
+    const endYear = startYear + Math.floor(endOffset / 12);
+    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const startText = `${monthNames[startMonth]} ${startYear}`;
+    const endText = `${monthNames[endMonth0]} ${endYear}`;
+
+  if ((project.calendar.coverStyle ?? 'large-photo') === 'large-photo') {
+      // Use first assigned photo or any available as cover
+      const anyPhoto = project.photos.find(p => !!p.previewUrl);
+      if (anyPhoto?.previewUrl) {
+        const img = await loadImage(anyPhoto.previewUrl);
+        // draw covering the top 90%
+        const coverH = photoH;
+        const coverW = width;
+        // render via canvas to preserve scaling quality
+        const canvas = document.createElement('canvas');
+        const scale = 300/72; // export at ~300 DPI equivalent
+        canvas.width = Math.max(1, Math.round(coverW * scale));
+        canvas.height = Math.max(1, Math.round(coverH * scale));
+        const ctx = canvas.getContext('2d')!;
+        ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+        const baseScale = Math.max(canvas.width / img.width, canvas.height / img.height);
+        ctx.save();
+        ctx.translate(canvas.width/2, canvas.height/2);
+        ctx.scale(baseScale, baseScale);
+        ctx.drawImage(img, -img.width/2, -img.height/2);
+        ctx.restore();
+        const png = await canvasToPngBytes(canvas);
+        const embedded = await pdf.embedPng(png);
+        page.drawImage(embedded, { x: 0, y: height - coverH, width: coverW, height: coverH });
+      } else {
+        // placeholder rect
+        page.drawRectangle({ x: 0, y: height - photoH, width, height: photoH, borderColor: rgb(0.4,0.6,0.9), borderWidth: 1 });
+      }
+    } else {
+      // grid-4x3: compile up to 12 month thumbnails (photos) into a 4x3 grid occupying 90%
+      const rows = 3, cols = 4;
+      const gap = 6;
+      const areaX = margin, areaY = height - photoH + margin;
+      const areaW = width - margin*2, areaH = photoH - margin*2;
+      const cellW = (areaW - gap*(cols-1)) / cols;
+      const cellH = (areaH - gap*(rows-1)) / rows;
+      // pick photos in month order
+      const photos: (string|undefined)[] = [];
+      for (let i = 0; i < Math.min(project.calendar.months, 12); i++) {
+        const pageData = project.monthData[i];
+        // prefer first slot with a photo
+        const slot = pageData?.slots?.find(s => !!s.photoId);
+        const p = slot ? project.photos.find(pp => pp.id === slot.photoId) : undefined;
+        photos.push(p?.previewUrl);
+      }
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const idx = r*cols + c;
+          const x = areaX + c * (cellW + gap);
+          const y = areaY + (rows - 1 - r) * (cellH + gap);
+          const url = photos[idx];
+          if (url) {
+            const img = await loadImage(url);
+            // embed with simple fit cover into cell
+            const canvas = document.createElement('canvas');
+            const scale = 300/72;
+            canvas.width = Math.max(1, Math.round(cellW * scale));
+            canvas.height = Math.max(1, Math.round(cellH * scale));
+            const ctx = canvas.getContext('2d')!;
+            ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+            const baseScale = Math.max(canvas.width / img.width, canvas.height / img.height);
+            ctx.save();
+            ctx.translate(canvas.width/2, canvas.height/2);
+            ctx.scale(baseScale, baseScale);
+            ctx.drawImage(img, -img.width/2, -img.height/2);
+            ctx.restore();
+            const png = await canvasToPngBytes(canvas);
+            const embedded = await pdf.embedPng(png);
+            page.drawImage(embedded, { x, y, width: cellW, height: cellH });
+          } else {
+            page.drawRectangle({ x, y, width: cellW, height: cellH, borderColor: rgb(0.8,0.8,0.8), borderWidth: 0.5 });
+          }
+        }
+      }
+    }
+    // Info stripe (10%) with start/end dates centered
+    const infoY = 0;
+    page.drawRectangle({ x: 0, y: infoY, width, height: infoH, color: rgb(1,1,1) });
+    const label = `${startText} — ${endText}`;
+    const size = 20;
+    const textW = font.widthOfTextAtSize(label, size);
+    page.drawText(label, { x: (width - textW)/2, y: infoY + (infoH - size)/2, size, font, color: rgb(0,0,0) });
+
+    pageCounter++;
+    if (onProgress) onProgress(pageCounter / totalPages);
+  }
 
   // Optional Yearly Overview
   if (project.calendar.includeYearlyOverview) {

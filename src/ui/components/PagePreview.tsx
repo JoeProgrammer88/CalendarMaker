@@ -155,9 +155,9 @@ export const PagePreview: React.FC = () => {
 const TransformControls: React.FC<{ slotId: string }> = () => {
   const { transform, update, reset } = useCalendarStore(s => {
     const m = s.project.monthData[s.ui.activeMonth];
-    const slot = m.slots.find(sl => sl.slotId === s.ui.activeSlotId)!;
+    const slot = m.slots.find(sl => sl.slotId === s.ui.activeSlotId) || m.slots[0];
     return {
-      transform: slot.transform,
+      transform: slot?.transform ?? { scale:1, translateX:0, translateY:0, rotationDegrees:0 },
       update: s.actions.updateActiveSlotTransform,
       reset: s.actions.resetActiveSlotTransform
     };

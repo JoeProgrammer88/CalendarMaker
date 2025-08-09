@@ -3,6 +3,7 @@ import { immer } from 'zustand/middleware/immer';
 import { shallow } from 'zustand/shallow';
 import { defaultProject } from '../util/defaultProject';
 import type { ProjectState, CalendarPageSizeKey, LayoutId, MonthSlot, SplitDirection } from '../types';
+import { getLayoutById } from '../util/layouts';
 import { exportAsPdf } from '../util/exporter';
 
 interface UIState {
@@ -25,6 +26,8 @@ interface Actions {
   setShowWeekNumbers(v: boolean): void;
   setShowCommonHolidays(v: boolean): void;
   setIncludeYearlyOverview(v: boolean): void;
+  setIncludeCoverPage(v: boolean): void;
+  setCoverStyle(style: 'large-photo' | 'grid-4x3'): void;
   resetProject(): void;
   setLayoutForMonth(monthIndex: number, layoutId: LayoutId): void;
   setActiveMonth(idx: number): void;
@@ -78,9 +81,41 @@ export const useCalendarStore = create<StoreShape>()(immer((set, get) => ({
   setShowWeekNumbers(v) { set(s => { s.project.calendar.showWeekNumbers = v; }); },
   setShowCommonHolidays(v) { set(s => { s.project.calendar.showCommonHolidays = v; }); },
   setIncludeYearlyOverview(v) { set(s => { s.project.calendar.includeYearlyOverview = v; }); },
+  setIncludeCoverPage(v) { set(s => { s.project.calendar.includeCoverPage = v; }); },
+  setCoverStyle(style) { set(s => { s.project.calendar.coverStyle = style; }); },
   resetProject() { set(s => { s.project = defaultProject(); s.ui.activeMonth = 0; s.ui.activeSlotId = 'main'; }); },
-    setLayoutForMonth(monthIndex, layoutId) { set(s => { s.project.calendar.layoutStylePerMonth[monthIndex] = layoutId; const page = s.project.monthData[monthIndex]; if (page && !page.slots.find((sl: MonthSlot) => sl.slotId === s.ui.activeSlotId)) { s.ui.activeSlotId = page.slots[0]?.slotId || null; } }); },
-    setActiveMonth(idx) { set(s => { s.ui.activeMonth = idx; const page = s.project.monthData[idx]; if (page && !page.slots.find((sl: MonthSlot) => sl.slotId === s.ui.activeSlotId)) { s.ui.activeSlotId = page.slots[0]?.slotId || null; } }); },
+    // Ensure month slots match layout definition (preserve existing where possible)
+    setLayoutForMonth(monthIndex, layoutId) { set(s => {
+      s.project.calendar.layoutStylePerMonth[monthIndex] = layoutId;
+      const layout = getLayoutById(layoutId);
+      const page = s.project.monthData[monthIndex];
+      if (layout && page) {
+        const newSlots: MonthSlot[] = layout.slots.map(def => {
+          const existing = page.slots.find(sl => sl.slotId === def.slotId);
+          return existing ?? { slotId: def.slotId, photoId: undefined, transform: { scale:1, translateX:0, translateY:0, rotationDegrees:0 } } as MonthSlot;
+        });
+        page.slots = newSlots;
+        if (!newSlots.find(sl => sl.slotId === s.ui.activeSlotId)) {
+          s.ui.activeSlotId = newSlots[0]?.slotId || null;
+        }
+      }
+    }); },
+    setActiveMonth(idx) { set(s => { 
+      s.ui.activeMonth = idx; 
+      const layoutId = s.project.calendar.layoutStylePerMonth[idx];
+      const layout = getLayoutById(layoutId);
+      const page = s.project.monthData[idx];
+      if (layout && page) {
+        const newSlots: MonthSlot[] = layout.slots.map(def => {
+          const existing = page.slots.find(sl => sl.slotId === def.slotId);
+          return existing ?? { slotId: def.slotId, photoId: undefined, transform: { scale:1, translateX:0, translateY:0, rotationDegrees:0 } } as MonthSlot;
+        });
+        page.slots = newSlots;
+        if (!newSlots.find(sl => sl.slotId === s.ui.activeSlotId)) {
+          s.ui.activeSlotId = newSlots[0]?.slotId || null;
+        }
+      }
+    }); },
     setActiveSlot(slotId) { set(s => { s.ui.activeSlotId = slotId; }); },
     setFontFamily(font) { set(s => { s.project.calendar.fontFamily = font; }); },
   setCaptionForActiveMonth(text) { set(s => { const m = s.ui.activeMonth; const page = s.project.monthData[m]; if (page) page.caption = text; }); },
