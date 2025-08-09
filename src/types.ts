@@ -22,6 +22,6 @@ export interface MonthPage { index: number; slots: MonthSlot[]; caption?: string
 export interface PhotoMeta { id: string; originalBlobRef?: string; previewBlobRef?: string; name: string; assignedMonths: number[]; previewUrl?: string; }
 export interface EventItem { id: string; dateISO: string; text: string; color?: string; visible: boolean; }
 
-export interface CalendarSettings { startMonth: number; startYear: number; months: number; layoutStylePerMonth: LayoutId[]; pageSize: CalendarPageSizeKey; orientation: Orientation; showWeekNumbers: boolean; showCommonHolidays: boolean; fontFamily: string; }
+export interface CalendarSettings { startMonth: number; startYear: number; months: number; layoutStylePerMonth: LayoutId[]; pageSize: CalendarPageSizeKey; orientation: Orientation; showWeekNumbers: boolean; showCommonHolidays: boolean; includeYearlyOverview?: boolean; fontFamily: string; }
 
 export interface ProjectState { id: string; meta: { createdAt: string; updatedAt: string; appVersion: string; }; calendar: CalendarSettings; photos: PhotoMeta[]; monthData: MonthPage[]; events: EventItem[]; }

@@ -2,10 +2,10 @@ import React, { useMemo } from 'react';
 import { useCalendarStore } from '../../store/store';
 import { getLayoutById } from '../../util/layouts';
 import { computePagePixelSize } from '../../util/pageSize';
-import { generateMonthGrid } from '../../util/calendar';
+import { generateMonthGrid, isoWeekNumber } from '../../util/calendar';
 
 export const PagePreview: React.FC = () => {
-  const { monthIndex, layoutId, pageSizeKey, orientation, photos, monthPage, activeSlotId, setActiveSlot, startMonth, startYear, showWeekNumbers } = useCalendarStore(s => ({
+  const { monthIndex, layoutId, pageSizeKey, orientation, photos, monthPage, activeSlotId, setActiveSlot, startMonth, startYear, showWeekNumbers, fontFamily, allEvents, openEventDialog } = useCalendarStore(s => ({
     monthIndex: s.ui.activeMonth,
     layoutId: s.project.calendar.layoutStylePerMonth[s.ui.activeMonth],
     pageSizeKey: s.project.calendar.pageSize,
@@ -16,7 +16,10 @@ export const PagePreview: React.FC = () => {
     setActiveSlot: s.actions.setActiveSlot,
     startMonth: s.project.calendar.startMonth,
     startYear: s.project.calendar.startYear,
-    showWeekNumbers: s.project.calendar.showWeekNumbers
+    showWeekNumbers: s.project.calendar.showWeekNumbers,
+    fontFamily: s.project.calendar.fontFamily,
+  allEvents: s.project.events,
+  openEventDialog: s.actions.openEventDialog
   }));
   const layout = getLayoutById(layoutId);
   const size = computePagePixelSize(pageSizeKey, orientation, 100); // preview DPI
@@ -61,34 +64,80 @@ export const PagePreview: React.FC = () => {
     const realYear = startYear + Math.floor(totalOffset / 12);
     const grid = generateMonthGrid(realYear, realMonth);
     const weekDayLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-    const cellW = (layout.grid.w * size.width) / 7;
+    const columns = 7 + (showWeekNumbers ? 1 : 0);
+    const cellW = (layout.grid.w * size.width) / columns;
     const cellH = (layout.grid.h * size.height) / 7; // row 0 header, rows 1-6 weeks
     const left = layout.grid.x * size.width;
     const top = layout.grid.y * size.height;
 
-    const header = weekDayLabels.map((d,i) => (
-      <div key={d} className="flex items-center justify-center text-[10px] font-medium border-b border-gray-300 dark:border-gray-600" style={{ position:'absolute', left: left + i*cellW, top, width: cellW, height: cellH }}>{d}</div>
-    ));
+    const header = [
+      ...(showWeekNumbers ? [<div key="wk" className="flex items-center justify-center text-[10px] font-medium border-b border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900" style={{ position:'absolute', left, top, width: cellW, height: cellH }}>Wk</div>] : []),
+      ...weekDayLabels.map((d,i) => (
+        <div key={d} className="flex items-center justify-center text-[10px] font-medium border-b border-gray-300 dark:border-gray-600" style={{ position:'absolute', left: left + (i + (showWeekNumbers?1:0))*cellW, top, width: cellW, height: cellH }}>{d}</div>
+      ))
+    ];
 
-    const weeks = grid.weeks.map((week,wIdx) => week.map((cell,dIdx) => {
-      const x = left + dIdx * cellW;
-      const y = top + (wIdx+1) * cellH;
-      return (
-        <div key={wIdx+'-'+dIdx} className={"absolute border border-gray-200 dark:border-gray-700 text-[10px] p-0.5 " + (cell.inMonth ? '' : 'opacity-30')} style={{ left:x, top:y, width:cellW, height:cellH }}>
-          {cell.day && <div className="font-medium select-none">{cell.day}</div>}
-        </div>
-      );
-    }));
+    // events indexed by day
+    const monthEvents: Record<number, { text: string; color?: string }[]> = {};
+    allEvents.forEach(ev => {
+      if (!ev.visible) return;
+      const [y,m,d] = ev.dateISO.split('-').map(Number);
+      if (y === realYear && m === realMonth + 1) {
+        const day = d;
+        if (!monthEvents[day]) monthEvents[day] = [];
+        monthEvents[day].push({ text: ev.text, color: ev.color });
+      }
+    });
+
+    const weeks = grid.weeks.map((week,wIdx) => {
+      const weekStart = week.find(c => c.inMonth && c.date)?.date || undefined;
+      const iso = weekStart ? isoWeekNumber(weekStart) : undefined;
+      return [
+        ...(showWeekNumbers ? [<div key={`wk-${wIdx}`} className="absolute border border-gray-200 dark:border-gray-700 text-[10px] flex items-center justify-center bg-gray-50 dark:bg-gray-900" style={{ left, top: top + (wIdx+1)*cellH, width: cellW, height: cellH }}>{iso ?? ''}</div>] : []),
+        ...week.map((cell,dIdx) => {
+          const x = left + (dIdx + (showWeekNumbers?1:0)) * cellW;
+          const y = top + (wIdx+1) * cellH;
+          const items = cell.day ? (monthEvents[cell.day] || []) : [];
+          const onDoubleClick: React.MouseEventHandler<HTMLDivElement> | undefined = (cell.inMonth && cell.day) ? () => {
+            const mm = String(realMonth + 1).padStart(2, '0');
+            const dd = String(cell.day!).padStart(2, '0');
+            const dateISO = `${realYear}-${mm}-${dd}`;
+            const dayVisible = (monthEvents[cell.day!] || []).length;
+            if (dayVisible === 1) {
+              // Find the single visible event's id to open in edit mode
+              const ev = allEvents.find(e => e.visible && e.dateISO === dateISO);
+              openEventDialog(dateISO, ev?.id || null);
+            } else {
+              openEventDialog(dateISO, null);
+            }
+          } : undefined;
+          return (
+            <div onDoubleClick={onDoubleClick} key={wIdx+'-'+dIdx} className={"absolute border border-gray-200 dark:border-gray-700 text-[10px] p-0.5 space-y-0.5 " + (cell.inMonth ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900' : 'opacity-30')} style={{ left:x, top:y, width:cellW, height:cellH }}>
+              {cell.day && <div className="font-medium select-none">{cell.day}</div>}
+              {items.slice(0,2).map((it,idx) => (
+                <div key={idx} className="truncate" title={it.text} style={{ color: it.color || undefined }}>{it.text}</div>
+              ))}
+              {items.length > 2 && <div className="text-[9px] text-gray-500">+{items.length-2} more</div>}
+            </div>
+          );
+        })
+      ];
+    });
 
     return { gridNode: <>{header}{weeks}</> };
-  }, [layout, size, monthIndex, startMonth, startYear]);
+  }, [layout, size, monthIndex, startMonth, startYear, showWeekNumbers, allEvents, openEventDialog]);
 
   return (
     <div className="flex flex-col items-center gap-2">
       <div className="text-sm font-medium">Month {monthIndex + 1} – Layout: {layout?.name}</div>
-      <div className="relative bg-white dark:bg-gray-800 shadow-inner" style={{ width: size.width, height: size.height }}>
+      <div className="relative bg-white dark:bg-gray-800 shadow-inner" style={{ width: size.width, height: size.height, fontFamily }}>
         {slotNodes}
         {gridNode}
+        {layout && monthPage.caption && (
+          <div className="absolute text-center text-[12px] text-gray-800 dark:text-gray-100 px-4" style={{ left: layout.grid.x * size.width, width: layout.grid.w * size.width, top: (layout.grid.y * size.height) - 22 }}>
+            {monthPage.caption}
+          </div>
+        )}
       </div>
       <div className="text-xs text-gray-500">Preview (not final resolution)</div>
     </div>

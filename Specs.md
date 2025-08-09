@@ -247,8 +247,12 @@ Rendering scales rects to pixel canvas size.
 ## 18. Milestones
 1. Foundation: Project scaffold, layout registry (single + multi-slot), calendar generator (Week 1). [Done]
 2. Photo Upload & Multi-Slot Transform Preview (Week 2). [Done]
-3. Events, Holidays Toggle & Grid Rendering (Week 3). [Partial] — Month grid rendering is implemented; Events UI and Holidays toggle pending.
-4. Export (PNG then PDF) (Week 4). [Partial] — Basic PDF export with placeholder outlines; full rendering of photos/text at print DPI pending.
+3. Events, Holidays Toggle & Grid Rendering (Week 3). [In Progress]
+  - Done: Month grid rendering; Events CRUD UI via double‑click on day (modal), render events in day cells (truncate), ISO week numbers toggle.
+  - Pending: Holidays toggle and dataset injection.
+4. Export (PNG then PDF) (Week 4). [In Progress]
+  - Done: PDF month/year label; calendar grid with day numbers, ISO week numbers; events (with color); caption above grid; photos rendered in slots with transforms at 300 DPI; export progress indicator.
+  - Pending: Embed selected fonts for vector text (match UI fonts), progress dialog polish.
 5. Persistence + Undo/Redo + Layout switching migrations (Week 5). [Pending]
 6. PWA + Polish + Accessibility & QA (Week 6). [Pending]
 
@@ -287,19 +291,19 @@ Rendering scales rects to pixel canvas size.
   - Hook selected font into grid/labels for preview and export
 
 - Pending
-  - Events: CRUD UI, storage, and rendering in day cells (truncate with tooltip)
-  - Week numbers toggle rendering in grid
+  - Events: Tooltip on hover for truncated text
+  - Holidays toggle and dataset injection on yearly overview
   - Yearly overview page and optional US Federal holidays (+ New Year’s Eve) injection
   - Persistence: IndexedDB for blobs + project JSON; autosave/restore; migrations
-  - Caption field per month (under photo area)
+  - Caption export typography polish (centering, font style)
   - Resolution warnings for low-res images (stretch goal)
   - Accessibility polish (ARIA, focus), keyboard shortcuts
   - PWA: service worker, manifest, offline shell
 
 - How to resume next time
   1) Implement Events UI and render events in day cells (use existing EventItem type)
-  2) Integrate week numbers toggle and selected font into grid rendering
-  3) Start export renderer: draw real grid text and placed photos to a 300 DPI canvas, then embed into PDF
+   2) Embed selected fonts for vector text in PDF (Inter, Merriweather, etc.)
+   3) Polish export progress UI (modal with cancel) and add yearly overview + holidays toggle
 
 ---
 End of Specification.

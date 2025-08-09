@@ -3,13 +3,20 @@ import { Sidebar } from './components/Sidebar';
 import { PagePreview } from './components/PagePreview';
 import { RightPanel } from './components/RightPanel';
 import { useCalendarStore } from '../store/store';
+import { EventModal } from './components/EventModal';
+import { ToastHost } from './components/ToastHost';
 
 export const App: React.FC = () => {
   const dark = useCalendarStore(s => s.ui.darkMode);
+  const { monthIndex, startMonth, startYear } = useCalendarStore(s => ({ monthIndex: s.ui.activeMonth, startMonth: s.project.calendar.startMonth, startYear: s.project.calendar.startYear }));
+  const totalOffset = startMonth + monthIndex;
+  const realMonth = totalOffset % 12;
+  const realYear = startYear + Math.floor(totalOffset / 12);
   return (
     <div className={dark ? 'dark h-full flex flex-col' : 'h-full flex flex-col'}>
       <header className="flex items-center justify-between px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
         <h1 className="font-semibold text-lg">Calendar Customizer (MVP)</h1>
+        <div className="text-sm text-gray-600 dark:text-gray-300">Viewing: {['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][realMonth]} {realYear}</div>
         <div className="flex items-center gap-2">
           <ThemeToggle />
         </div>
@@ -21,6 +28,8 @@ export const App: React.FC = () => {
         </main>
         <RightPanel />
       </div>
+  <EventModal />
+  <ToastHost />
     </div>
   );
 };

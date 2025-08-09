@@ -17,6 +17,7 @@ export function defaultProject(): ProjectState {
       orientation: 'portrait',
       showWeekNumbers: false,
       showCommonHolidays: false,
+  includeYearlyOverview: false,
       fontFamily: 'Inter'
     },
     photos: [],
