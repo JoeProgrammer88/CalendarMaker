@@ -3,6 +3,9 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
+  // Base path for GitHub Pages project site: https://<user>.github.io/CalendarMaker/
+  // This ensures built asset URLs are prefixed with /CalendarMaker/
+  base: '/CalendarMaker/',
   plugins: [
     react(),
     VitePWA({
@@ -12,7 +15,9 @@ export default defineConfig({
         name: 'Calendar Customizer',
         short_name: 'Calendar',
         description: 'Design and export printable photo calendars offline.',
-        start_url: '.',
+        // Ensure the PWA starts within the GitHub Pages base path
+        start_url: '/CalendarMaker/',
+        scope: '/CalendarMaker/',
         display: 'standalone',
         background_color: '#111827',
         theme_color: '#111827',
@@ -25,7 +30,8 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
           {
-            urlPattern: ({ url }) => url.origin === self.location.origin && url.pathname.startsWith('/assets/'),
+            // Cache built assets regardless of whether the site is served from root or a subpath (e.g., /CalendarMaker/)
+            urlPattern: ({ url }) => url.origin === self.location.origin && url.pathname.includes('/assets/'),
             handler: 'StaleWhileRevalidate',
             options: { cacheName: 'assets' }
           },
