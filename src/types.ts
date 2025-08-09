@@ -28,11 +28,11 @@ export interface PhotoTransform { scale: number; translateX: number; translateY:
 export interface MonthSlot { slotId: string; photoId?: string; transform: PhotoTransform; }
 export interface MonthPage { index: number; slots: MonthSlot[]; caption?: string; events: string[]; }
 
-export interface PhotoMeta { id: string; originalBlobRef?: string; previewBlobRef?: string; name: string; assignedMonths: number[]; previewUrl?: string; }
+export interface PhotoMeta { id: string; originalBlobRef?: string; previewBlobRef?: string; name: string; assignedMonths: number[]; previewUrl?: string; alt?: string; }
 export interface EventItem { id: string; dateISO: string; text: string; color?: string; visible: boolean; }
 
 export type SplitDirection = 'tb' | 'lr'; // tb: top/bottom, lr: left/right
 export type CoverStyle = 'large-photo' | 'grid-4x3';
 export interface CalendarSettings { startMonth: number; startYear: number; months: number; layoutStylePerMonth: LayoutId[]; pageSize: CalendarPageSizeKey; orientation: Orientation; splitDirection: SplitDirection; showWeekNumbers: boolean; showCommonHolidays: boolean; includeYearlyOverview?: boolean; includeCoverPage?: boolean; coverStyle?: CoverStyle; fontFamily: string; }
 
-export interface ProjectState { id: string; meta: { createdAt: string; updatedAt: string; appVersion: string; }; calendar: CalendarSettings; photos: PhotoMeta[]; monthData: MonthPage[]; events: EventItem[]; }
+export interface ProjectState { id: string; meta: { createdAt: string; updatedAt: string; appVersion: string; schemaVersion: number; }; calendar: CalendarSettings; photos: PhotoMeta[]; monthData: MonthPage[]; events: EventItem[]; }

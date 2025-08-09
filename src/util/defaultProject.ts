@@ -7,7 +7,7 @@ export function defaultProject(): ProjectState {
   const year = new Date().getFullYear();
   return {
     id: crypto.randomUUID(),
-    meta: { createdAt: now, updatedAt: now, appVersion: '0.1.0' },
+  meta: { createdAt: now, updatedAt: now, appVersion: '0.1.0', schemaVersion: 1 },
     calendar: {
       startMonth: 0,
       startYear: year,
@@ -24,7 +24,7 @@ export function defaultProject(): ProjectState {
       fontFamily: 'Inter'
     },
     photos: [],
-    monthData: Array.from({length:12}, (_,i) => ({ index: i, slots: [ { slotId: 'main', photoId: undefined, transform: { scale:1, translateX:0, translateY:0, rotationDegrees:0 } } ], caption: '', events: [] })),
+  monthData: Array.from({length:12}, (_,i) => ({ index: i, slots: [ { slotId: 'main', photoId: undefined, transform: { scale:1, translateX:0, translateY:0, rotationDegrees:0 } } ], caption: '', events: [] })),
     events: []
   };
 }

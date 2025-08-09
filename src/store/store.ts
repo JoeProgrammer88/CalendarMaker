@@ -4,8 +4,8 @@ import { shallow } from 'zustand/shallow';
 import { defaultProject } from '../util/defaultProject';
 import type { ProjectState, CalendarPageSizeKey, LayoutId, MonthSlot, SplitDirection } from '../types';
 import { getLayoutById } from '../util/layouts';
-import { exportAsPdf } from '../util/exporter';
-import { debounce, getLastProjectId, loadProjectById, savePhotoBlob, saveProject } from '../util/persistence';
+import { exportAsPdf, exportCurrentPageAsPng } from '../util/exporter';
+import { debounce, getLastProjectId, loadProjectById, savePhotoBlob, saveProject, clearProject } from '../util/persistence';
 
 interface UIState {
   darkMode: boolean;
@@ -15,6 +15,8 @@ interface UIState {
   eventDialog: { open: boolean; dateISO: string | null; editEventId: string | null };
   toasts: { id: string; text: string; type: 'info' | 'success' | 'error' }[];
   exportProgress: number; // 0..1
+  history: ProjectState[];
+  future: ProjectState[];
 }
 
 interface Actions {
@@ -38,6 +40,7 @@ interface Actions {
   openEventDialog(dateISO: string, editEventId?: string | null): void;
   closeEventDialog(): void;
   exportProject(): Promise<void>;
+  exportCurrentMonthPng(): Promise<void>;
   addPhotos(files: FileList | File[]): Promise<void>;
   assignPhotoToActiveSlot(photoId: string, slotId?: string): void;
   updateActiveSlotTransform(delta: Partial<{ scale: number; translateX: number; translateY: number; rotationDegrees: number }>): void;
@@ -51,6 +54,9 @@ interface Actions {
   setExportProgress(p: number): void;
   saveNow(): Promise<void>;
   loadLastProject(): Promise<void>;
+  undo(): void;
+  redo(): void;
+  clearAllData(): Promise<void>;
 }
 
 interface StoreShape {
@@ -61,7 +67,7 @@ interface StoreShape {
 
 export const useCalendarStore = create<StoreShape>()(immer((set, get) => ({
   project: defaultProject(),
-  ui: { darkMode: false, activeMonth: 0, exporting: false, activeSlotId: 'main', eventDialog: { open: false, dateISO: null, editEventId: null }, toasts: [], exportProgress: 0 },
+  ui: { darkMode: false, activeMonth: 0, exporting: false, activeSlotId: 'main', eventDialog: { open: false, dateISO: null, editEventId: null }, toasts: [], exportProgress: 0, history: [], future: [] },
   actions: {
     toggleDarkMode() { set(s => { s.ui.darkMode = !s.ui.darkMode; }); },
   setPageSize(size) { set(s => { 
@@ -86,9 +92,10 @@ export const useCalendarStore = create<StoreShape>()(immer((set, get) => ({
   setIncludeYearlyOverview(v) { set(s => { s.project.calendar.includeYearlyOverview = v; }); },
   setIncludeCoverPage(v) { set(s => { s.project.calendar.includeCoverPage = v; }); },
   setCoverStyle(style) { set(s => { s.project.calendar.coverStyle = style; }); },
-  resetProject() { set(s => { s.project = defaultProject(); s.ui.activeMonth = 0; s.ui.activeSlotId = 'main'; }); get().actions.saveNow(); },
+  resetProject() { set(s => { s.project = defaultProject(); s.ui.activeMonth = 0; s.ui.activeSlotId = 'main'; s.ui.history = []; s.ui.future = []; }); get().actions.saveNow(); },
     // Ensure month slots match layout definition (preserve existing where possible)
     setLayoutForMonth(monthIndex, layoutId) { set(s => {
+      s.ui.history.push(structuredClone(s.project)); s.ui.future = [];
       s.project.calendar.layoutStylePerMonth[monthIndex] = layoutId;
       const layout = getLayoutById(layoutId);
       const page = s.project.monthData[monthIndex];
@@ -103,7 +110,7 @@ export const useCalendarStore = create<StoreShape>()(immer((set, get) => ({
         }
       }
   }); get().actions.saveNow(); },
-    setActiveMonth(idx) { set(s => { 
+  setActiveMonth(idx) { set(s => { 
       s.ui.activeMonth = idx; 
       const layoutId = s.project.calendar.layoutStylePerMonth[idx];
       const layout = getLayoutById(layoutId);
@@ -120,7 +127,7 @@ export const useCalendarStore = create<StoreShape>()(immer((set, get) => ({
       }
     }); },
     setActiveSlot(slotId) { set(s => { s.ui.activeSlotId = slotId; }); },
-    setFontFamily(font) { set(s => { s.project.calendar.fontFamily = font; }); get().actions.saveNow(); },
+  setFontFamily(font) { set(s => { s.ui.history.push(structuredClone(s.project)); s.ui.future = []; s.project.calendar.fontFamily = font; }); get().actions.saveNow(); },
   setCaptionForActiveMonth(text) { set(s => { const m = s.ui.activeMonth; const page = s.project.monthData[m]; if (page) page.caption = text; });
       // Debounce caption saves
       if (!(window as any).__cm_save_debounced__) {
@@ -131,6 +138,7 @@ export const useCalendarStore = create<StoreShape>()(immer((set, get) => ({
   openEventDialog(dateISO, editEventId) { set(s => { s.ui.eventDialog = { open: true, dateISO, editEventId: editEventId ?? null }; }); },
   closeEventDialog() { set(s => { s.ui.eventDialog = { open: false, dateISO: null, editEventId: null }; }); },
   async exportProject() { if (get().ui.exporting) return; set(s => { s.ui.exporting = true; s.ui.exportProgress = 0; }); try { await exportAsPdf(get().project, (p: number) => { set(s => { s.ui.exportProgress = p; }); }); } finally { set(s => { s.ui.exporting = false; s.ui.exportProgress = 0; }); } },
+  async exportCurrentMonthPng() { try { const idx = get().ui.activeMonth; await exportCurrentPageAsPng(get().project, idx); } catch (e) { get().actions.addToast('PNG export failed', 'error'); } },
     async addPhotos(files) {
       const arr = Array.from(files);
       const newPhotos = await Promise.all(arr.map(async f => {
@@ -144,17 +152,17 @@ export const useCalendarStore = create<StoreShape>()(immer((set, get) => ({
       get().actions.saveNow();
     },
     assignPhotoToActiveSlot(photoId, slotId) { set(s => { const m = s.ui.activeMonth; const monthPage = s.project.monthData[m]; const targetSlotId = slotId || s.ui.activeSlotId || monthPage.slots[0]?.slotId; const slot = monthPage.slots.find((sl: MonthSlot) => sl.slotId === targetSlotId); if (slot) slot.photoId = photoId; }); get().actions.saveNow(); },
-    updateActiveSlotTransform(delta) { set(s => { const m = s.ui.activeMonth; const monthPage = s.project.monthData[m]; const slot = monthPage.slots.find((sl: MonthSlot) => sl.slotId === s.ui.activeSlotId) || monthPage.slots[0]; if (!slot) return; if (delta.scale !== undefined) slot.transform.scale = Math.min(5, Math.max(0.1, delta.scale)); if (delta.translateX !== undefined) slot.transform.translateX = delta.translateX; if (delta.translateY !== undefined) slot.transform.translateY = delta.translateY; if (delta.rotationDegrees !== undefined) slot.transform.rotationDegrees = ((delta.rotationDegrees % 360) + 360) % 360; });
+  updateActiveSlotTransform(delta) { set(s => { const m = s.ui.activeMonth; const monthPage = s.project.monthData[m]; const slot = monthPage.slots.find((sl: MonthSlot) => sl.slotId === s.ui.activeSlotId) || monthPage.slots[0]; if (!slot) return; if (delta.scale !== undefined) slot.transform.scale = Math.min(5, Math.max(0.1, delta.scale)); if (delta.translateX !== undefined) slot.transform.translateX = delta.translateX; if (delta.translateY !== undefined) slot.transform.translateY = delta.translateY; if (delta.rotationDegrees !== undefined) slot.transform.rotationDegrees = ((delta.rotationDegrees % 360) + 360) % 360; });
       if (!(window as any).__cm_save_debounced__) {
         (window as any).__cm_save_debounced__ = debounce(() => get().actions.saveNow(), 800);
       }
       (window as any).__cm_save_debounced__();
     },
   resetActiveSlotTransform() { set(s => { const m = s.ui.activeMonth; const monthPage = s.project.monthData[m]; const slot = monthPage.slots.find((sl: MonthSlot) => sl.slotId === s.ui.activeSlotId); if (slot) { slot.transform = { scale:1, translateX:0, translateY:0, rotationDegrees:0 }; } }); },
-  addEvent(input) { set(s => { const id = crypto.randomUUID(); s.project.events.push({ id, dateISO: input.dateISO, text: input.text, color: input.color, visible: true }); }); get().actions.saveNow(); },
+  addEvent(input) { set(s => { s.ui.history.push(structuredClone(s.project)); s.ui.future = []; const id = crypto.randomUUID(); s.project.events.push({ id, dateISO: input.dateISO, text: input.text, color: input.color, visible: true }); }); get().actions.saveNow(); },
   deleteEvent(id) { set(s => { s.project.events = s.project.events.filter(ev => ev.id !== id); }); },
   toggleEventVisible(id) { set(s => { const ev = s.project.events.find(e => e.id === id); if (ev) ev.visible = !ev.visible; }); get().actions.saveNow(); },
-    updateEvent(id, input) { set(s => { const ev = s.project.events.find(e => e.id === id); if (!ev) return; if (input.text !== undefined) ev.text = input.text; if (input.color !== undefined) ev.color = input.color; if (input.dateISO !== undefined) ev.dateISO = input.dateISO; }); get().actions.saveNow(); },
+    updateEvent(id, input) { set(s => { s.ui.history.push(structuredClone(s.project)); s.ui.future = []; const ev = s.project.events.find(e => e.id === id); if (!ev) return; if (input.text !== undefined) ev.text = input.text; if (input.color !== undefined) ev.color = input.color; if (input.dateISO !== undefined) ev.dateISO = input.dateISO; }); get().actions.saveNow(); },
     addToast(text, type = 'info') {
       const id = crypto.randomUUID();
       set(s => { s.ui.toasts.push({ id, text, type }); });
@@ -170,7 +178,10 @@ export const useCalendarStore = create<StoreShape>()(immer((set, get) => ({
       if (loaded) {
         set(s => { s.project = loaded; s.ui.activeMonth = 0; s.ui.activeSlotId = 'main'; });
       }
-  }
+  },
+  undo() { set(s => { const prev = s.ui.history.pop(); if (prev) { s.ui.future.push(structuredClone(s.project)); s.project = prev; } }); },
+  redo() { set(s => { const next = s.ui.future.pop(); if (next) { s.ui.history.push(structuredClone(s.project)); s.project = next; } }); },
+  async clearAllData() { const id = get().project.id; await clearProject(id); set(s => { s.project = defaultProject(); s.ui.history = []; s.ui.future = []; s.ui.activeMonth = 0; s.ui.activeSlotId = 'main'; }); }
   }
 })));
 

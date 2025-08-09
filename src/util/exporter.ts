@@ -444,6 +444,59 @@ export async function exportAsPdf(project: ProjectState, onProgress?: (p: number
   URL.revokeObjectURL(url);
 }
 
+// Export the currently active month as a PNG via canvas rendering path.
+export async function exportCurrentPageAsPng(project: ProjectState, monthIndex: number): Promise<void> {
+  // Reuse PDF logic: render each slot to a canvas and the grid to canvas, then download PNG
+  // For MVP, we'll call into PDF pipeline’s per-slot canvas steps quickly by duplicating minimal logic here.
+  const { pageSize, orientation, layoutStylePerMonth, splitDirection } = project.calendar;
+  const px = computePagePixelSize(pageSize, orientation, 300);
+  const canvas = document.createElement('canvas');
+  canvas.width = px.width; canvas.height = px.height;
+  const ctx = canvas.getContext('2d')!;
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,px.width, px.height);
+  const layout = getEffectiveLayout(layoutStylePerMonth[monthIndex], splitDirection)!;
+  // Draw photos
+  const monthPage = project.monthData[monthIndex];
+  for (const slot of layout.slots) {
+    const slotPixelW = Math.max(1, Math.round(slot.rect.w * px.width));
+    const slotPixelH = Math.max(1, Math.round(slot.rect.h * px.height));
+    const s = monthPage.slots.find(ss => ss.slotId === slot.slotId);
+    const photo = s?.photoId ? project.photos.find(p => p.id === s.photoId) : undefined;
+    const x = Math.round(slot.rect.x * px.width);
+    const y = Math.round(slot.rect.y * px.height);
+    if (!s || !photo?.previewUrl) {
+      ctx.strokeStyle = '#4d80e5'; ctx.lineWidth = 2; ctx.strokeRect(x, y, slotPixelW, slotPixelH);
+      continue;
+    }
+    const img = await loadImage(photo.previewUrl);
+    const t = s.transform;
+    const baseScale = Math.max(slotPixelW / img.width, slotPixelH / img.height);
+    const scale = baseScale * (t.scale || 1);
+    const tx = (t.translateX || 0) * slotPixelW;
+    const ty = (t.translateY || 0) * slotPixelH;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(x, y, slotPixelW, slotPixelH); ctx.clip();
+    ctx.translate(x + slotPixelW/2 + tx, y + slotPixelH/2 + ty);
+    if (t.rotationDegrees) ctx.rotate((t.rotationDegrees * Math.PI) / 180);
+    ctx.scale(scale, scale);
+    ctx.drawImage(img, -img.width/2, -img.height/2);
+    ctx.restore();
+  }
+  // Simple month label (header only) to signal success; full grid PNG export can be deepened post-MVP
+  ctx.fillStyle = '#000';
+  ctx.font = '24px sans-serif';
+  const totalOffset = project.calendar.startMonth + monthIndex;
+  const realMonth = totalOffset % 12;
+  const realYear = project.calendar.startYear + Math.floor(totalOffset / 12);
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const text = `${monthNames[realMonth]} ${realYear}`;
+  const textWidth = ctx.measureText(text).width;
+  ctx.fillText(text, (px.width - textWidth)/2, 32);
+  // Download
+  const url = canvas.toDataURL('image/png');
+  const a = document.createElement('a'); a.href = url; a.download = `calendar-${realYear}-${String(realMonth+1).padStart(2,'0')}.png`; a.click();
+}
+
 function parseHexColor(hex?: string) {
   if (!hex) return rgb(0,0,0);
   let h = hex.trim();

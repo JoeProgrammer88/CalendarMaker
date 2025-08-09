@@ -41,6 +41,10 @@ export async function loadProjectById(id: string): Promise<ProjectState | null> 
   let data: ProjectState | undefined;
   try { data = await get(projectKey(id)); } catch {}
   if (!data) return null;
+  // Migrate if needed
+  if (!data.meta || (data.meta as any).schemaVersion === undefined) {
+    data = migrateToLatest(data as any);
+  }
   // Recreate preview URLs from stored blobs
   const photos = await Promise.all(
     (data.photos || []).map(async (p) => {
@@ -59,6 +63,15 @@ export async function clearProject(id: string): Promise<void> {
     await Promise.all((data.photos || []).map(async p => { if (p.originalBlobRef) await del(p.originalBlobRef); }));
   }
   await del(projectKey(id));
+}
+
+export function migrateToLatest(old: any): ProjectState {
+  const migrated: ProjectState = {
+    ...old,
+    meta: { ...(old.meta||{}), schemaVersion: 1 }
+  } as ProjectState;
+  // Future migrations can be added here.
+  return migrated;
 }
 
 export function debounce<T extends (...args: any[]) => void>(fn: T, ms: number): T {

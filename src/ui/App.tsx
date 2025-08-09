@@ -10,7 +10,26 @@ export const App: React.FC = () => {
   const dark = useCalendarStore(s => s.ui.darkMode);
   const { monthIndex, startMonth, startYear } = useCalendarStore(s => ({ monthIndex: s.ui.activeMonth, startMonth: s.project.calendar.startMonth, startYear: s.project.calendar.startYear }));
   const load = useCalendarStore(s => s.actions.loadLastProject);
+  const undo = useCalendarStore(s => s.actions.undo);
+  const redo = useCalendarStore(s => s.actions.redo);
+  const nudge = useCalendarStore(s => s.actions.updateActiveSlotTransform);
   React.useEffect(() => { load(); }, [load]);
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const ctrlOrMeta = e.ctrlKey || e.metaKey;
+      if (ctrlOrMeta && e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); return; }
+      if (ctrlOrMeta && (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z'))) { e.preventDefault(); redo(); return; }
+      const step = e.shiftKey ? 0.02 : 0.005;
+      if (e.key === 'ArrowLeft') { nudge({ translateX: (val => val - step)(0) }); }
+      if (e.key === 'ArrowRight') { nudge({ translateX: (val => val + step)(0) }); }
+      if (e.key === 'ArrowUp') { nudge({ translateY: (val => val - step)(0) }); }
+      if (e.key === 'ArrowDown') { nudge({ translateY: (val => val + step)(0) }); }
+      if (e.key === '+') { nudge({ scale: (val => val + 0.05)(0) }); }
+      if (e.key === '-') { nudge({ scale: (val => val - 0.05)(0) }); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [undo, redo, nudge]);
   const totalOffset = startMonth + monthIndex;
   const realMonth = totalOffset % 12;
   const realYear = startYear + Math.floor(totalOffset / 12);
