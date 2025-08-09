@@ -308,17 +308,19 @@ Rendering scales rects to pixel canvas size.
   - Split toggle with auto-switch to 5×7 Landscape; multi-photo layouts use columns for 2/3 photos and 2×2 uses half-page as specified
   - Dual/Triple Top/Bottom variants are exactly 50% photo area / 50% grid; Left/Right variants constrain photos to left 50% and grid to right 50%
   - Preview polish: eliminated header/photo overlap in 5×7 Landscape by precise header background sizing
+  - Persistence: IndexedDB for blobs + project JSON with autosave/restore; schema version + migrate
+  - Undo/Redo history (Ctrl/Cmd+Z/Y); keyboard transforms (arrows +/-); alt text per photo; error toasts; Clear All Data
+  - PNG export: current page as high-DPI PNG
+  - PWA: Vite PWA (Workbox) with precache and runtime caching; GitHub Pages ready (base path + SPA 404)
 
 - Underway
-  - PDF font embedding/subsetting to match selected UI font
+  - PDF font embedding/subsetting polish to match selected UI font
   - Yearly Overview: expand holiday dataset (and handle cross-year spans)
 
 - Pending
-  - Persistence: IndexedDB for blobs + project JSON; autosave/restore; migrations
   - Caption export typography polish (centering, font style)
   - Resolution warnings for low-res images (stretch goal)
   - Accessibility polish (ARIA, focus), keyboard shortcuts
-  - PWA: service worker, manifest, offline shell
 
 - How to resume next time
   1) Embed selected fonts for vector text in PDF (Inter, Merriweather, etc.)

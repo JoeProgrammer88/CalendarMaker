@@ -136,9 +136,22 @@ export const Sidebar: React.FC = () => {
         </label>
         <label className="block">
           <span className="text-xs font-medium">Layout</span>
-          <select value={state.layout} onChange={e => state.setLayoutForMonth(state.monthIndex, e.target.value as LayoutId)} className="mt-1 w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded px-2 py-1">
-            {LAYOUTS.filter(l => !l.id.endsWith('-lr') && l.id !== 'single-left').map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-          </select>
+          {(() => {
+            // Normalize any LR-specific ids to their TB counterparts so the value matches available options
+            const normalize = (id: string): LayoutId => {
+              if (id === 'single-left') return 'single-top' as LayoutId;
+              if ((id as string) === 'dual-split-lr') return 'dual-split' as LayoutId;
+              if ((id as string) === 'triple-strip-lr') return 'triple-strip' as LayoutId;
+              if ((id as string) === 'quad-grid-lr') return 'quad-grid' as LayoutId;
+              return id as LayoutId;
+            };
+            const value = normalize(state.layout as string);
+            return (
+              <select value={value} onChange={e => state.setLayoutForMonth(state.monthIndex, e.target.value as LayoutId)} className="mt-1 w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded px-2 py-1">
+                {LAYOUTS.filter(l => !l.id.endsWith('-lr') && l.id !== 'single-left').map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+              </select>
+            );
+          })()}
         </label>
   <button onClick={() => { if (confirm('Reset the project to defaults? This will clear photos and events.')) state.resetProject(); }} className="w-full text-xs bg-red-600 text-white rounded py-1 hover:bg-red-700">Reset Project</button>
       </div>

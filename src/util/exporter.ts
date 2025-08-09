@@ -354,18 +354,20 @@ export async function exportAsPdf(project: ProjectState, onProgress?: (p: number
     const gy = height - (g.y * height) - (g.h * height);
     const gw = g.w * width;
     const gh = g.h * height;
+  // Compute header metrics first
+  const columns = 7 + (project.calendar.showWeekNumbers ? 1 : 0);
+  const cellW = gw / columns;
+  const cellH = gh / 7; // header + 6 weeks
+  // Header background fill (draw BEFORE text so it doesn't cover the label)
+  page.drawRectangle({ x: gx, y: gy + gh - cellH, width: gw, height: cellH, color: rgb(0.96,0.96,0.96) });
   // Month label inside grid header (bottom half)
   const labelSize = 16;
   const labelWidth = font.widthOfTextAtSize(monthLabel, labelSize);
   const labelX = gx + (gw - labelWidth) / 2;
   const labelY = gy + gh - labelSize - 2; // near top of header row
   page.drawText(monthLabel, { x: labelX, y: labelY, size: labelSize, font, color: rgb(0,0,0) });
+  // Outer grid border
   page.drawRectangle({ x: gx, y: gy, width: gw, height: gh, borderColor: rgb(0.6,0.6,0.6), borderWidth: 1 });
-  const columns = 7 + (project.calendar.showWeekNumbers ? 1 : 0);
-  const cellW = gw / columns;
-  const cellH = gh / 7; // header + 6 weeks
-  // Header background fill (behind weekday labels)
-  page.drawRectangle({ x: gx, y: gy + gh - cellH, width: gw, height: cellH, color: rgb(0.96,0.96,0.96) });
     const weekDayLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
     // Header labels
     if (project.calendar.showWeekNumbers) {

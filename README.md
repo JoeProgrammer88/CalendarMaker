@@ -22,15 +22,18 @@ A fully client-side React + TypeScript web application for designing printable p
 - Cover page (optional): Large Photo (90% photo) or 4×3 Month Grid (12 thumbnails), both with a 10% date range footer.
 - PDF export: vector text (standard fonts), photos at ~300 DPI, precise grid lines (no header underline), shaded header background, progress indicator.
 - Dark / light UI theme toggle.
+- Undo/Redo history, keyboard transforms (arrows/+/-), and selection guards.
+- Alt text per photo and error toasts; “Clear all data” action.
+- Export current page as PNG.
+- Persistence: autosave/restore with IndexedDB (photos) + LocalStorage (last project), schema version + migrate stub.
+- PWA: precaching via Vite PWA (Workbox) with runtime caching (assets/Google Fonts); ready for GitHub Pages deploy (base path + SPA 404).
 
 ## ⏳ In Progress / Remaining
-- PDF font embedding/subsetting to match selected UI fonts.
-- Persistence: IndexedDB blobs + project JSON; autosave/restore; migrations.
+- PDF font embedding/subsetting polish (embed TTFs when available; fallback works).
 - Expanded holiday dataset and cross‑year handling (overview).
 - Resolution warnings for low‑res images (stretch).
 - Export progress UI polish (modal with cancel).
-- Accessibility polish (ARIA/focus, keyboard shortcuts).
-- PWA: service worker, manifest, offline shell.
+- Accessibility polish (ARIA/focus, shortcuts refinement).
 
 ## 🧱 Future / Nice-to-Have (Post-MVP)
 See `Specs.md` for full list (collage designer, sharing, cloud sync, AI assist, custom fonts upload, lunar phases, etc.).
@@ -47,7 +50,7 @@ See `Specs.md` for full list (collage designer, sharing, cloud sync, AI assist, 
 | Storage | IndexedDB (idb-keyval) + LocalStorage | Photos + project state |
 | PDF | pdf-lib | Vector text & drawing |
 | Image Perf | createImageBitmap / Canvas | Planned for transforms |
-| PWA | Workbox (planned) | Offline shell |
+| PWA | Vite PWA (Workbox) | Offline shell + runtime caching |
 
 ## 📂 Project Structure
 ```
@@ -69,7 +72,33 @@ npm run dev
 ```
 Visit http://localhost:5173 (default Vite port).
 
-## 🔧 NPM Scripts
+## � Deploy to GitHub Pages
+
+This repo is preconfigured for GitHub Pages project hosting.
+
+- Base path is set to `/CalendarMaker/` in `vite.config.ts`.
+- PWA manifest `start_url` and `scope` target `/CalendarMaker/`.
+- SPA routing fallback is handled by copying `dist/index.html` → `dist/404.html` during build.
+- A GitHub Actions workflow (`.github/workflows/deploy-pages.yml`) builds and publishes Pages.
+
+Steps:
+1) Push changes to the `main` branch.
+2) In your GitHub repository, go to Settings → Pages and set Source to “GitHub Actions”.
+3) Wait for the workflow to complete; your site will be available at:
+  https://JoeProgrammer88.github.io/CalendarMaker/
+
+Local build/preview (optional):
+```bash
+npm run build
+npm run preview
+```
+
+Notes:
+- If you fork/rename the repo, update `base` in `vite.config.ts` and the PWA `start_url/scope` to match the new repo path.
+- For a custom domain, set `base: '/'` and update PWA `start_url/scope` accordingly.
+- PWA uses auto-update; if you ever see stale assets, hard refresh (Ctrl+F5) or unregister the SW in DevTools.
+
+## �🔧 NPM Scripts
 | Script | Purpose |
 |--------|---------|
 | dev | Start Vite dev server |
@@ -103,8 +132,8 @@ Visit http://localhost:5173 (default Vite port).
 | Cover Page Options | Done |
 | Holidays Toggle + Year Overview | Done (basic set) |
 | Export Refinement (fonts embedding) | In Progress |
-| Persistence + Autosave | Pending |
-| PWA + Offline + Polish | Pending |
+| Persistence + Autosave | Done |
+| PWA + Offline + Polish | Done |
 
 ## 🔐 Privacy
 All data stays local. No network transmission of images.

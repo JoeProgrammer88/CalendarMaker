@@ -71,6 +71,17 @@ export function migrateToLatest(old: any): ProjectState {
     meta: { ...(old.meta||{}), schemaVersion: 1 }
   } as ProjectState;
   // Future migrations can be added here.
+  try {
+    if (migrated?.calendar?.layoutStylePerMonth) {
+      migrated.calendar.layoutStylePerMonth = migrated.calendar.layoutStylePerMonth.map((id: any) => {
+        if (id === 'single-left') return 'single-top' as any;
+        if (id === 'dual-split-lr') return 'dual-split' as any;
+        if (id === 'triple-strip-lr') return 'triple-strip' as any;
+        if (id === 'quad-grid-lr') return 'quad-grid' as any;
+        return id;
+      });
+    }
+  } catch {}
   return migrated;
 }
 
