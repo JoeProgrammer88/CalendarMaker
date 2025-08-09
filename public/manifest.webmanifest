@@ -1,0 +1,23 @@
+{
+  "name": "Calendar Customizer",
+  "short_name": "Calendar",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#111827",
+  "theme_color": "#111827",
+  "description": "Design and export printable photo calendars offline.",
+  "icons": [
+    {
+      "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAABr5+1eAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAJ0lEQVR4nO3BMQEAAAgDIN8/9K3hAAQAAAAAAAAAAAAAAAAAAAAAAAD4GQmMAAGyQZ3sAAAAAElFTkSuQmCC",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAYAAABccqhmAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAKklEQVR4nO3BMQEAAAgDIN8/9K1gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPwGQlsAABr1oAIAAAAASUVORK5CYII=",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
