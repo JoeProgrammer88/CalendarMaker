@@ -5,6 +5,7 @@ import { defaultProject } from '../util/defaultProject';
 import type { ProjectState, CalendarPageSizeKey, LayoutId, MonthSlot, SplitDirection } from '../types';
 import { getLayoutById } from '../util/layouts';
 import { exportAsPdf } from '../util/exporter';
+import { debounce, getLastProjectId, loadProjectById, savePhotoBlob, saveProject } from '../util/persistence';
 
 interface UIState {
   darkMode: boolean;
@@ -48,6 +49,8 @@ interface Actions {
   addToast(text: string, type?: 'info' | 'success' | 'error'): void;
   removeToast(id: string): void;
   setExportProgress(p: number): void;
+  saveNow(): Promise<void>;
+  loadLastProject(): Promise<void>;
 }
 
 interface StoreShape {
@@ -83,7 +86,7 @@ export const useCalendarStore = create<StoreShape>()(immer((set, get) => ({
   setIncludeYearlyOverview(v) { set(s => { s.project.calendar.includeYearlyOverview = v; }); },
   setIncludeCoverPage(v) { set(s => { s.project.calendar.includeCoverPage = v; }); },
   setCoverStyle(style) { set(s => { s.project.calendar.coverStyle = style; }); },
-  resetProject() { set(s => { s.project = defaultProject(); s.ui.activeMonth = 0; s.ui.activeSlotId = 'main'; }); },
+  resetProject() { set(s => { s.project = defaultProject(); s.ui.activeMonth = 0; s.ui.activeSlotId = 'main'; }); get().actions.saveNow(); },
     // Ensure month slots match layout definition (preserve existing where possible)
     setLayoutForMonth(monthIndex, layoutId) { set(s => {
       s.project.calendar.layoutStylePerMonth[monthIndex] = layoutId;
@@ -99,7 +102,7 @@ export const useCalendarStore = create<StoreShape>()(immer((set, get) => ({
           s.ui.activeSlotId = newSlots[0]?.slotId || null;
         }
       }
-    }); },
+  }); get().actions.saveNow(); },
     setActiveMonth(idx) { set(s => { 
       s.ui.activeMonth = idx; 
       const layoutId = s.project.calendar.layoutStylePerMonth[idx];
@@ -117,8 +120,14 @@ export const useCalendarStore = create<StoreShape>()(immer((set, get) => ({
       }
     }); },
     setActiveSlot(slotId) { set(s => { s.ui.activeSlotId = slotId; }); },
-    setFontFamily(font) { set(s => { s.project.calendar.fontFamily = font; }); },
-  setCaptionForActiveMonth(text) { set(s => { const m = s.ui.activeMonth; const page = s.project.monthData[m]; if (page) page.caption = text; }); },
+    setFontFamily(font) { set(s => { s.project.calendar.fontFamily = font; }); get().actions.saveNow(); },
+  setCaptionForActiveMonth(text) { set(s => { const m = s.ui.activeMonth; const page = s.project.monthData[m]; if (page) page.caption = text; });
+      // Debounce caption saves
+      if (!(window as any).__cm_save_debounced__) {
+        (window as any).__cm_save_debounced__ = debounce(() => get().actions.saveNow(), 800);
+      }
+      (window as any).__cm_save_debounced__();
+    },
   openEventDialog(dateISO, editEventId) { set(s => { s.ui.eventDialog = { open: true, dateISO, editEventId: editEventId ?? null }; }); },
   closeEventDialog() { set(s => { s.ui.eventDialog = { open: false, dateISO: null, editEventId: null }; }); },
   async exportProject() { if (get().ui.exporting) return; set(s => { s.ui.exporting = true; s.ui.exportProgress = 0; }); try { await exportAsPdf(get().project, (p: number) => { set(s => { s.ui.exportProgress = p; }); }); } finally { set(s => { s.ui.exporting = false; s.ui.exportProgress = 0; }); } },
@@ -127,25 +136,41 @@ export const useCalendarStore = create<StoreShape>()(immer((set, get) => ({
       const newPhotos = await Promise.all(arr.map(async f => {
         const id = crypto.randomUUID();
         const blob = f;
+        const originalBlobRef = await savePhotoBlob(id, blob);
         const previewUrl = URL.createObjectURL(blob);
-        return { id, originalBlobRef: '', previewBlobRef: '', name: f.name, assignedMonths: [], previewUrl };
+        return { id, originalBlobRef, previewBlobRef: '', name: f.name, assignedMonths: [], previewUrl };
       }));
       set(s => { s.project.photos.push(...newPhotos); });
+      get().actions.saveNow();
     },
-    assignPhotoToActiveSlot(photoId, slotId) { set(s => { const m = s.ui.activeMonth; const monthPage = s.project.monthData[m]; const targetSlotId = slotId || s.ui.activeSlotId || monthPage.slots[0]?.slotId; const slot = monthPage.slots.find((sl: MonthSlot) => sl.slotId === targetSlotId); if (slot) slot.photoId = photoId; }); },
-    updateActiveSlotTransform(delta) { set(s => { const m = s.ui.activeMonth; const monthPage = s.project.monthData[m]; const slot = monthPage.slots.find((sl: MonthSlot) => sl.slotId === s.ui.activeSlotId) || monthPage.slots[0]; if (!slot) return; if (delta.scale !== undefined) slot.transform.scale = Math.min(5, Math.max(0.1, delta.scale)); if (delta.translateX !== undefined) slot.transform.translateX = delta.translateX; if (delta.translateY !== undefined) slot.transform.translateY = delta.translateY; if (delta.rotationDegrees !== undefined) slot.transform.rotationDegrees = ((delta.rotationDegrees % 360) + 360) % 360; }); },
+    assignPhotoToActiveSlot(photoId, slotId) { set(s => { const m = s.ui.activeMonth; const monthPage = s.project.monthData[m]; const targetSlotId = slotId || s.ui.activeSlotId || monthPage.slots[0]?.slotId; const slot = monthPage.slots.find((sl: MonthSlot) => sl.slotId === targetSlotId); if (slot) slot.photoId = photoId; }); get().actions.saveNow(); },
+    updateActiveSlotTransform(delta) { set(s => { const m = s.ui.activeMonth; const monthPage = s.project.monthData[m]; const slot = monthPage.slots.find((sl: MonthSlot) => sl.slotId === s.ui.activeSlotId) || monthPage.slots[0]; if (!slot) return; if (delta.scale !== undefined) slot.transform.scale = Math.min(5, Math.max(0.1, delta.scale)); if (delta.translateX !== undefined) slot.transform.translateX = delta.translateX; if (delta.translateY !== undefined) slot.transform.translateY = delta.translateY; if (delta.rotationDegrees !== undefined) slot.transform.rotationDegrees = ((delta.rotationDegrees % 360) + 360) % 360; });
+      if (!(window as any).__cm_save_debounced__) {
+        (window as any).__cm_save_debounced__ = debounce(() => get().actions.saveNow(), 800);
+      }
+      (window as any).__cm_save_debounced__();
+    },
   resetActiveSlotTransform() { set(s => { const m = s.ui.activeMonth; const monthPage = s.project.monthData[m]; const slot = monthPage.slots.find((sl: MonthSlot) => sl.slotId === s.ui.activeSlotId); if (slot) { slot.transform = { scale:1, translateX:0, translateY:0, rotationDegrees:0 }; } }); },
-  addEvent(input) { set(s => { const id = crypto.randomUUID(); s.project.events.push({ id, dateISO: input.dateISO, text: input.text, color: input.color, visible: true }); }); },
+  addEvent(input) { set(s => { const id = crypto.randomUUID(); s.project.events.push({ id, dateISO: input.dateISO, text: input.text, color: input.color, visible: true }); }); get().actions.saveNow(); },
   deleteEvent(id) { set(s => { s.project.events = s.project.events.filter(ev => ev.id !== id); }); },
-  toggleEventVisible(id) { set(s => { const ev = s.project.events.find(e => e.id === id); if (ev) ev.visible = !ev.visible; }); },
-    updateEvent(id, input) { set(s => { const ev = s.project.events.find(e => e.id === id); if (!ev) return; if (input.text !== undefined) ev.text = input.text; if (input.color !== undefined) ev.color = input.color; if (input.dateISO !== undefined) ev.dateISO = input.dateISO; }); },
+  toggleEventVisible(id) { set(s => { const ev = s.project.events.find(e => e.id === id); if (ev) ev.visible = !ev.visible; }); get().actions.saveNow(); },
+    updateEvent(id, input) { set(s => { const ev = s.project.events.find(e => e.id === id); if (!ev) return; if (input.text !== undefined) ev.text = input.text; if (input.color !== undefined) ev.color = input.color; if (input.dateISO !== undefined) ev.dateISO = input.dateISO; }); get().actions.saveNow(); },
     addToast(text, type = 'info') {
       const id = crypto.randomUUID();
       set(s => { s.ui.toasts.push({ id, text, type }); });
       setTimeout(() => { set(s => { s.ui.toasts = s.ui.toasts.filter(t => t.id !== id); }); }, 2500);
     },
-    removeToast(id) { set(s => { s.ui.toasts = s.ui.toasts.filter(t => t.id !== id); }); }
-  , setExportProgress(p) { set(s => { s.ui.exportProgress = p; }); }
+  removeToast(id) { set(s => { s.ui.toasts = s.ui.toasts.filter(t => t.id !== id); }); },
+  setExportProgress(p) { set(s => { s.ui.exportProgress = p; }); },
+  async saveNow() { await saveProject(get().project); },
+  async loadLastProject() {
+      const lastId = getLastProjectId();
+      if (!lastId) return;
+      const loaded = await loadProjectById(lastId);
+      if (loaded) {
+        set(s => { s.project = loaded; s.ui.activeMonth = 0; s.ui.activeSlotId = 'main'; });
+      }
+  }
   }
 })));
 

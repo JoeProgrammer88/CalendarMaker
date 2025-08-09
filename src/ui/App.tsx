@@ -9,6 +9,8 @@ import { ToastHost } from './components/ToastHost';
 export const App: React.FC = () => {
   const dark = useCalendarStore(s => s.ui.darkMode);
   const { monthIndex, startMonth, startYear } = useCalendarStore(s => ({ monthIndex: s.ui.activeMonth, startMonth: s.project.calendar.startMonth, startYear: s.project.calendar.startYear }));
+  const load = useCalendarStore(s => s.actions.loadLastProject);
+  React.useEffect(() => { load(); }, [load]);
   const totalOffset = startMonth + monthIndex;
   const realMonth = totalOffset % 12;
   const realYear = startYear + Math.floor(totalOffset / 12);
