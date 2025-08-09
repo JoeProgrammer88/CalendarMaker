@@ -74,14 +74,22 @@ export const PagePreview: React.FC = () => {
     const left = layout.grid.x * size.width;
     const top = layout.grid.y * size.height;
 
-    const header = [
+  const headerLeft = Math.ceil(left);
+  const headerWidth = Math.max(0, Math.floor(layout.grid.w * size.width) - 1);
+  const header = [
+      // Shaded header background spanning the full header row
+  <div key="header-bg" className="absolute bg-gray-100 dark:bg-gray-800/80" style={{ left: headerLeft, top: top, width: headerWidth, height: cellH }} />,
       // Month label inside the grid header (bottom half of the page)
-      <div key="month-label" className="absolute text-center text-[14px] font-semibold" style={{ left, top: top + 2, width: layout.grid.w * size.width }}>
+  <div key="month-label" className="absolute text-center text-[14px] font-semibold" style={{ left: headerLeft, top: top + 2, width: headerWidth }}>
         {monthLabel}
       </div>,
-      ...(showWeekNumbers ? [<div key="wk" className="flex items-start justify-center text-[10px] font-medium border-b border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900" style={{ position:'absolute', left, top, width: cellW, height: cellH, paddingTop: 18 }}>Wk</div>] : []),
+   ...(showWeekNumbers ? [
+     <div key="wk" className="flex items-start justify-center text-[10px] font-medium bg-gray-50 dark:bg-gray-900"
+       style={{ position:'absolute', left: headerLeft, top, width: cellW, height: cellH, paddingTop: 18 }}>Wk</div>
+      ] : []),
       ...weekDayLabels.map((d,i) => (
-        <div key={d} className="flex items-start justify-center text-[10px] font-medium border-b border-gray-300 dark:border-gray-600" style={{ position:'absolute', left: left + (i + (showWeekNumbers?1:0))*cellW, top, width: cellW, height: cellH, paddingTop: 18 }}>{d}</div>
+     <div key={d} className="flex items-start justify-center text-[10px] font-medium"
+       style={{ position:'absolute', left: headerLeft + (i + (showWeekNumbers?1:0))*cellW, top, width: cellW, height: cellH, paddingTop: 18 }}>{d}</div>
       ))
     ];
 
@@ -101,7 +109,10 @@ export const PagePreview: React.FC = () => {
       const weekStart = week.find(c => c.inMonth && c.date)?.date || undefined;
       const iso = weekStart ? isoWeekNumber(weekStart) : undefined;
       return [
-        ...(showWeekNumbers ? [<div key={`wk-${wIdx}`} className="absolute border border-gray-200 dark:border-gray-700 text-[10px] flex items-center justify-center bg-gray-50 dark:bg-gray-900" style={{ left, top: top + (wIdx+1)*cellH, width: cellW, height: cellH }}>{iso ?? ''}</div>] : []),
+        ...(showWeekNumbers ? [
+          <div key={`wk-${wIdx}`} className={"absolute border border-gray-200 dark:border-gray-700 text-[10px] flex items-center justify-center bg-gray-50 dark:bg-gray-900"}
+               style={{ left, top: top + (wIdx+1)*cellH, width: cellW, height: cellH }}>{iso ?? ''}</div>
+        ] : []),
         ...week.map((cell,dIdx) => {
           const x = left + (dIdx + (showWeekNumbers?1:0)) * cellW;
           const y = top + (wIdx+1) * cellH;

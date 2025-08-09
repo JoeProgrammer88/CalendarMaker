@@ -319,6 +319,8 @@ export async function exportAsPdf(project: ProjectState, onProgress?: (p: number
   const columns = 7 + (project.calendar.showWeekNumbers ? 1 : 0);
   const cellW = gw / columns;
   const cellH = gh / 7; // header + 6 weeks
+  // Header background fill (behind weekday labels)
+  page.drawRectangle({ x: gx, y: gy + gh - cellH, width: gw, height: cellH, color: rgb(0.96,0.96,0.96) });
     const weekDayLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
     // Header labels
     if (project.calendar.showWeekNumbers) {
@@ -328,15 +330,19 @@ export async function exportAsPdf(project: ProjectState, onProgress?: (p: number
       const cx = gx + (i + (project.calendar.showWeekNumbers ? 1 : 0)) * cellW;
       page.drawText(d, { x: cx + 4, y: gy + gh - cellH + 4, size: 10, font, color: rgb(0,0,0) });
     });
-    // Grid lines
-    for (let r = 0; r <= 7; r++) {
-      const y = gy + r * cellH;
-      page.drawLine({ start: { x: gx, y }, end: { x: gx + gw, y }, thickness: 0.5, color: rgb(0.8,0.8,0.8) });
-    }
-    for (let c = 0; c <= columns; c++) {
-      const x = gx + c * cellW;
-      page.drawLine({ start: { x, y: gy }, end: { x, y: gy + gh }, thickness: 0.5, color: rgb(0.8,0.8,0.8) });
-    }
+    // Grid lines (skip header row separators)
+      // horizontal lines: draw all except the one directly under the header (r=6)
+      for (let r = 0; r <= 7; r++) {
+        if (r === 6) continue; // skip header bottom line
+        const y = gy + r * cellH;
+        page.drawLine({ start: { x: gx, y }, end: { x: gx + gw, y }, thickness: 0.5, color: rgb(0.8,0.8,0.8) });
+      }
+      // vertical lines: draw full height but omit overpainting header bottom line by drawing from just below header
+      const headerBottomY = gy + cellH;
+      for (let c = 0; c <= columns; c++) {
+        const x = gx + c * cellW;
+        page.drawLine({ start: { x, y: headerBottomY }, end: { x, y: gy + gh }, thickness: 0.5, color: rgb(0.8,0.8,0.8) });
+      }
 
     // Days and events (truncate to 2 lines)
     const grid = generateMonthGrid(realYear, realMonth);
