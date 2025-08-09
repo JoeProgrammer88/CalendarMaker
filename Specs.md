@@ -19,10 +19,10 @@ Provide a fully client‑side (no backend service required) web application that
 ## 4. Scope
 ### In Scope (MVP)
 - Calendar types: Monthly (12 pages) + Cover; Single-Year overview (optional toggle).  
+  - Cover page styles: Large Photo (image occupies ~90% of page with a ~10% date-range footer) or 4×3 Photo Grid (12 month thumbnails) with a ~10% footer.  
 - Page sizes: 5"×7" (portrait & landscape), US Letter (8.5"×11") portrait & landscape, A4, 11"×17" (tabloid) portrait & landscape, 13"×19" (Super B) landscape (portrait if feasible).  
- - Page sizes: 5"×7" (portrait & landscape), US Letter (8.5"×11") portrait & landscape, A4, 11"×17" (tabloid) portrait & landscape, 13"×19" (Super B) landscape (portrait if feasible).  
-   - UX rule: Selecting 5×7 defaults orientation to Landscape and applies a left/right split layout (photo left, calendar right).  
-   - Split rule: Left/Right split is available on 5×7 Landscape; choosing L/R elsewhere auto-switches to 5×7 Landscape.  
+  - UX rule: Selecting 5×7 defaults orientation to Landscape and applies a left/right split layout (photo left, calendar right).  
+  - Split rule: Left/Right split is available on 5×7 Landscape; choosing L/R elsewhere auto-switches to 5×7 Landscape.  
 - Layout styles (initial set):
   - Single Photo Top + Grid Bottom
   - Single Photo Left + Grid Right
@@ -31,6 +31,7 @@ Provide a fully client‑side (no backend service required) web application that
   - Triple Photo Strip (one large + two small) 
   - Quad Photo Grid (2×2 collage)
   - Mosaic (asymmetric collage) [stretch inside MVP if time]
+  - Proportions rule: Dual and Triple Top/Bottom variants allocate exactly 50% page height to photos and 50% to the grid. Left/Right variants allocate 50% width to photos (left) and 50% to the grid (right).  
 - Start month & year selection (e.g., start at July 2025).  
 - Photo upload (drag & drop, file picker, multiple files).  
 - Per-month photo assignment / reuse (multiple slots where layout supports).  
@@ -89,7 +90,8 @@ Provide a fully client‑side (no backend service required) web application that
 - Generate month grid given year, month, locale (needs: first weekday = Sunday/Monday toggle future).  
 - Include leading/trailing days (toggle) or leave blanks; MVP: blanks.  
 - Optionally compute ISO week numbers (algorithmic, client).  
-- Show month label above the grid header (weekdays) for each month.  
+- Header bar: Draw a shaded header background above the weekday row and center the month/year label within it (preview + export).  
+- Gridlines: Omit the horizontal gridline directly under the header bar; preserve the top line of the first week row. Vertical gridlines start below the header bar.  
 - Yearly overview page supports optional injection of common holidays (data file).  
 
 ### 6.2 Photo Handling
@@ -102,6 +104,7 @@ Provide a fully client‑side (no backend service required) web application that
 ### 6.3 Editing UI
 - Layout: Left sidebar (Project / Photos / Events / Layouts / Fonts), central canvas preview (page), right properties panel (contextual).  
  - Split toggle: Top/Bottom vs Left/Right; L/R places photos on the left and the calendar grid on the right, and auto-switches to 5×7 Landscape if needed.  
+ - Cover controls: "Include Cover Page" toggle and "Cover Style" selector (Large Photo or 4×3 Month Grid).  
 - Slot selection: clicking a photo slot highlights it; transforms apply to active slot.  
 - Font picker: radio/list with preview swatches + fallback.  
 - Keyboard: arrow keys nudge photo (1px), Shift+arrow (10px), +/- or wheel for zoom (active slot).  
@@ -120,7 +123,8 @@ Provide a fully client‑side (no backend service required) web application that
   2. Draw background, each photo slot (apply transforms individually), grid lines (vector drawn), text.  
   3. Export canvas.toDataURL("image/png") or assemble multi-page PDF (vector text).  
 - Outline fonts or embed subset fonts (license-compliant) to keep file size small.  
-- Place the month label just above the grid area to align with preview.  
+- Header and grid rules (export parity with preview): Shaded header bar with centered month/year label; no gridline directly under the header; vertical gridlines start below the header; top line of the first week row is present.  
+- Cover page rendering: Large Photo style uses ~90% image area with ~10% date-range footer; 4×3 grid style compiles 12 month thumbnails with ~10% footer. Cover precedes monthly pages.  
 - Provide progress indicator for multi-page export.  
 
 ### 6.6 Persistence
@@ -219,6 +223,8 @@ Each layout style: {
 }
 Rendering scales rects to pixel canvas size.  
 
+- SplitDirection & variants: When SplitDirection is Left/Right and the page size is 5×7 Landscape, left/right variants are used (photos confined to left 50%, grid on right 50%). Otherwise Top/Bottom variants apply (photos above, grid below). UI hides LR-specific variants from the layout picker and maps automatically based on SplitDirection.
+
 ## 12. DPI & Scaling Strategy
 - Internal logical page uses 0..widthPx coordinates (widthPx = DPI * widthInches).  
 - Preview canvas may use reduced DPI (e.g. 100) for performance; export uses 300.  
@@ -296,9 +302,12 @@ Rendering scales rects to pixel canvas size.
   - Caption per month (preview + export)
   - PDF export: real grid with day numbers, events (colors), caption, photos rendered at 300 DPI per slot
   - Export progress indicator (button label + progress bar)
-  - Month label shown above the grid (preview + export)
+  - Shaded header bar with centered month/year label; no gridline directly under header; top line of the first week row preserved (preview + export parity)
+  - Cover page: Large Photo (≈90% image + 10% footer) and 4×3 month grid options (precede monthly pages)
   - Yearly Overview page (optional toggle) with mini-month grids; basic fixed-date US holidays highlight when enabled
   - Split toggle with auto-switch to 5×7 Landscape; multi-photo layouts use columns for 2/3 photos and 2×2 uses half-page as specified
+  - Dual/Triple Top/Bottom variants are exactly 50% photo area / 50% grid; Left/Right variants constrain photos to left 50% and grid to right 50%
+  - Preview polish: eliminated header/photo overlap in 5×7 Landscape by precise header background sizing
 
 - Underway
   - PDF font embedding/subsetting to match selected UI font
@@ -312,9 +321,10 @@ Rendering scales rects to pixel canvas size.
   - PWA: service worker, manifest, offline shell
 
 - How to resume next time
-  1) Implement Events UI and render events in day cells (use existing EventItem type)
-   2) Embed selected fonts for vector text in PDF (Inter, Merriweather, etc.)
-   3) Polish export progress UI (modal with cancel) and add yearly overview + holidays toggle
+  1) Embed selected fonts for vector text in PDF (Inter, Merriweather, etc.)
+  2) Add an export progress modal with cancel
+  3) Implement persistence (IndexedDB + autosave/restore) and migrations
+  4) Expand yearly overview holiday dataset and handle cross-year spans
 
 ---
 End of Specification.

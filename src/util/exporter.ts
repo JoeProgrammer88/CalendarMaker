@@ -1,4 +1,6 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+// @ts-ignore - fontkit types not provided by default
+import fontkit from '@pdf-lib/fontkit';
 import type { ProjectState } from '../types';
 import { computePagePixelSize } from './pageSize';
 import { getLayoutById } from './layouts';
@@ -15,6 +17,45 @@ function pickStandardFontName(fontFamily: string) {
       // Inter, Oswald, Dancing Script → Helvetica fallback
       return StandardFonts.Helvetica;
   }
+}
+
+async function tryFetchFontBytes(family: string): Promise<Uint8Array | undefined> {
+  // Expect TTFs placed under public/fonts so they're served at /fonts/*.ttf
+  // We'll try a few common filenames per family.
+  const candidates: Record<string, string[]> = {
+    'Inter': ['Inter-Regular.ttf', 'Inter.ttf'],
+    'Merriweather': ['Merriweather-Regular.ttf', 'Merriweather.ttf'],
+    'Dancing Script': ['DancingScript-Regular.ttf', 'DancingScript.ttf'],
+    'Oswald': ['Oswald-Regular.ttf', 'Oswald.ttf'],
+    'JetBrains Mono': ['JetBrainsMono-Regular.ttf', 'JetBrainsMono.ttf'],
+  };
+  const files = candidates[family] ?? [];
+  for (const file of files) {
+    const url = `/fonts/${file}`;
+    try {
+      const resp = await fetch(url);
+      if (resp.ok) {
+        const buf = await resp.arrayBuffer();
+        return new Uint8Array(buf);
+      }
+    } catch (_) {
+      // ignore and try next
+    }
+  }
+  return undefined;
+}
+
+async function embedSelectedFont(pdf: PDFDocument, fontFamily: string) {
+  // Try custom TTF first (subset for size), then fallback to core StandardFonts
+  const bytes = await tryFetchFontBytes(fontFamily);
+  if (bytes) {
+    try {
+      return await pdf.embedFont(bytes, { subset: true });
+    } catch (_) {
+      // fall through to standard font if embed fails
+    }
+  }
+  return await pdf.embedFont(pickStandardFontName(fontFamily));
 }
 
 async function loadImage(url: string): Promise<HTMLImageElement> {
@@ -58,7 +99,11 @@ function getCommonHolidays(year: number): Record<string, string> {
 
 export async function exportAsPdf(project: ProjectState, onProgress?: (p: number) => void) {
   const pdf = await PDFDocument.create();
-  const font = await pdf.embedFont(pickStandardFontName(project.calendar.fontFamily));
+  // Register fontkit to allow embedding TrueType/OpenType fonts
+  // Note: this call is harmless if fontkit cannot be loaded in some environments
+  // and custom fonts will gracefully fall back to StandardFonts.
+  try { (pdf as any).registerFontkit?.(fontkit); } catch {}
+  const font = await embedSelectedFont(pdf, project.calendar.fontFamily);
   const hasCover = !!project.calendar.includeCoverPage;
   const totalPages = project.calendar.months + (project.calendar.includeYearlyOverview ? 1 : 0) + (hasCover ? 1 : 0);
   let pageCounter = 0;
