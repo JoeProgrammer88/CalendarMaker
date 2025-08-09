@@ -20,6 +20,9 @@ Provide a fully client‑side (no backend service required) web application that
 ### In Scope (MVP)
 - Calendar types: Monthly (12 pages) + Cover; Single-Year overview (optional toggle).  
 - Page sizes: 5"×7" (portrait & landscape), US Letter (8.5"×11") portrait & landscape, A4, 11"×17" (tabloid) portrait & landscape, 13"×19" (Super B) landscape (portrait if feasible).  
+ - Page sizes: 5"×7" (portrait & landscape), US Letter (8.5"×11") portrait & landscape, A4, 11"×17" (tabloid) portrait & landscape, 13"×19" (Super B) landscape (portrait if feasible).  
+   - UX rule: Selecting 5×7 defaults orientation to Landscape and applies a left/right split layout (photo left, calendar right).  
+   - Split rule: Left/Right split is available on 5×7 Landscape; choosing L/R elsewhere auto-switches to 5×7 Landscape.  
 - Layout styles (initial set):
   - Single Photo Top + Grid Bottom
   - Single Photo Left + Grid Right
@@ -37,6 +40,7 @@ Provide a fully client‑side (no backend service required) web application that
 - Event/holiday entry (simple: date + short text) stored locally.  
 - Optional toggle: show common holidays (initial limited US federal set + New Year’s Eve) on yearly overview (may be downgraded to stretch if time).  
 - Option to show week numbers (ISO).  
+- Month label displayed above each monthly grid (preview and export).  
 - Localization: month & weekday names (English only MVP, extensible).  
 - Light/Dark theme for UI (not print).  
 - Export per page as PNG and whole calendar as multi-page PDF (vector text).  
@@ -85,6 +89,7 @@ Provide a fully client‑side (no backend service required) web application that
 - Generate month grid given year, month, locale (needs: first weekday = Sunday/Monday toggle future).  
 - Include leading/trailing days (toggle) or leave blanks; MVP: blanks.  
 - Optionally compute ISO week numbers (algorithmic, client).  
+- Show month label above the grid header (weekdays) for each month.  
 - Yearly overview page supports optional injection of common holidays (data file).  
 
 ### 6.2 Photo Handling
@@ -96,6 +101,7 @@ Provide a fully client‑side (no backend service required) web application that
 
 ### 6.3 Editing UI
 - Layout: Left sidebar (Project / Photos / Events / Layouts / Fonts), central canvas preview (page), right properties panel (contextual).  
+ - Split toggle: Top/Bottom vs Left/Right; L/R places photos on the left and the calendar grid on the right, and auto-switches to 5×7 Landscape if needed.  
 - Slot selection: clicking a photo slot highlights it; transforms apply to active slot.  
 - Font picker: radio/list with preview swatches + fallback.  
 - Keyboard: arrow keys nudge photo (1px), Shift+arrow (10px), +/- or wheel for zoom (active slot).  
@@ -114,6 +120,7 @@ Provide a fully client‑side (no backend service required) web application that
   2. Draw background, each photo slot (apply transforms individually), grid lines (vector drawn), text.  
   3. Export canvas.toDataURL("image/png") or assemble multi-page PDF (vector text).  
 - Outline fonts or embed subset fonts (license-compliant) to keep file size small.  
+- Place the month label just above the grid area to align with preview.  
 - Provide progress indicator for multi-page export.  
 
 ### 6.6 Persistence
@@ -284,16 +291,20 @@ Rendering scales rects to pixel canvas size.
   - Photo upload library, thumbnails, per-slot assignment
   - Non-destructive transforms UI per slot (zoom, pan, rotate, reset)
   - Month grid generation and preview rendering
-  - Basic PDF export (placeholder layout outlines)
+  - Events CRUD via modal; double‑click on day to add/edit; visibility toggle; tooltips for truncated events in preview
+  - ISO week numbers toggle (preview + export)
+  - Caption per month (preview + export)
+  - PDF export: real grid with day numbers, events (colors), caption, photos rendered at 300 DPI per slot
+  - Export progress indicator (button label + progress bar)
+  - Month label shown above the grid (preview + export)
+  - Yearly Overview page (optional toggle) with mini-month grids; basic fixed-date US holidays highlight when enabled
+  - Split toggle with auto-switch to 5×7 Landscape; multi-photo layouts use columns for 2/3 photos and 2×2 uses half-page as specified
 
 - Underway
-  - Export refinement: render real calendar text and photos at high DPI; embed fonts
-  - Hook selected font into grid/labels for preview and export
+  - PDF font embedding/subsetting to match selected UI font
+  - Yearly Overview: expand holiday dataset (and handle cross-year spans)
 
 - Pending
-  - Events: Tooltip on hover for truncated text
-  - Holidays toggle and dataset injection on yearly overview
-  - Yearly overview page and optional US Federal holidays (+ New Year’s Eve) injection
   - Persistence: IndexedDB for blobs + project JSON; autosave/restore; migrations
   - Caption export typography polish (centering, font style)
   - Resolution warnings for low-res images (stretch goal)

@@ -1,15 +1,17 @@
 import React, { useMemo } from 'react';
 import { useCalendarStore } from '../../store/store';
 import { getLayoutById } from '../../util/layouts';
+import { getEffectiveLayout } from '../../util/constants';
 import { computePagePixelSize } from '../../util/pageSize';
 import { generateMonthGrid, isoWeekNumber } from '../../util/calendar';
 
 export const PagePreview: React.FC = () => {
-  const { monthIndex, layoutId, pageSizeKey, orientation, photos, monthPage, activeSlotId, setActiveSlot, startMonth, startYear, showWeekNumbers, fontFamily, allEvents, openEventDialog } = useCalendarStore(s => ({
+  const { monthIndex, layoutId, pageSizeKey, orientation, splitDirection, photos, monthPage, activeSlotId, setActiveSlot, startMonth, startYear, showWeekNumbers, fontFamily, allEvents, openEventDialog } = useCalendarStore(s => ({
     monthIndex: s.ui.activeMonth,
     layoutId: s.project.calendar.layoutStylePerMonth[s.ui.activeMonth],
     pageSizeKey: s.project.calendar.pageSize,
     orientation: s.project.calendar.orientation,
+    splitDirection: s.project.calendar.splitDirection,
     photos: s.project.photos,
     monthPage: s.project.monthData[s.ui.activeMonth],
     activeSlotId: s.ui.activeSlotId,
@@ -21,7 +23,7 @@ export const PagePreview: React.FC = () => {
   allEvents: s.project.events,
   openEventDialog: s.actions.openEventDialog
   }));
-  const layout = getLayoutById(layoutId);
+  const layout = getEffectiveLayout(layoutId, splitDirection);
   const size = computePagePixelSize(pageSizeKey, orientation, 100); // preview DPI
 
   const slotNodes = useMemo(() => {
@@ -62,7 +64,9 @@ export const PagePreview: React.FC = () => {
     const totalOffset = startMonth + monthIndex;
     const realMonth = totalOffset % 12;
     const realYear = startYear + Math.floor(totalOffset / 12);
-    const grid = generateMonthGrid(realYear, realMonth);
+  const grid = generateMonthGrid(realYear, realMonth);
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const monthLabel = `${monthNames[realMonth]} ${realYear}`;
     const weekDayLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
     const columns = 7 + (showWeekNumbers ? 1 : 0);
     const cellW = (layout.grid.w * size.width) / columns;
@@ -71,9 +75,13 @@ export const PagePreview: React.FC = () => {
     const top = layout.grid.y * size.height;
 
     const header = [
-      ...(showWeekNumbers ? [<div key="wk" className="flex items-center justify-center text-[10px] font-medium border-b border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900" style={{ position:'absolute', left, top, width: cellW, height: cellH }}>Wk</div>] : []),
+      // Month label inside the grid header (bottom half of the page)
+      <div key="month-label" className="absolute text-center text-[14px] font-semibold" style={{ left, top: top + 2, width: layout.grid.w * size.width }}>
+        {monthLabel}
+      </div>,
+      ...(showWeekNumbers ? [<div key="wk" className="flex items-start justify-center text-[10px] font-medium border-b border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900" style={{ position:'absolute', left, top, width: cellW, height: cellH, paddingTop: 18 }}>Wk</div>] : []),
       ...weekDayLabels.map((d,i) => (
-        <div key={d} className="flex items-center justify-center text-[10px] font-medium border-b border-gray-300 dark:border-gray-600" style={{ position:'absolute', left: left + (i + (showWeekNumbers?1:0))*cellW, top, width: cellW, height: cellH }}>{d}</div>
+        <div key={d} className="flex items-start justify-center text-[10px] font-medium border-b border-gray-300 dark:border-gray-600" style={{ position:'absolute', left: left + (i + (showWeekNumbers?1:0))*cellW, top, width: cellW, height: cellH, paddingTop: 18 }}>{d}</div>
       ))
     ];
 
@@ -124,7 +132,7 @@ export const PagePreview: React.FC = () => {
       ];
     });
 
-    return { gridNode: <>{header}{weeks}</> };
+  return { gridNode: <>{header}{weeks}</> };
   }, [layout, size, monthIndex, startMonth, startYear, showWeekNumbers, allEvents, openEventDialog]);
 
   return (

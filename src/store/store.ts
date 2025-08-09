@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { shallow } from 'zustand/shallow';
 import { defaultProject } from '../util/defaultProject';
-import type { ProjectState, CalendarPageSizeKey, LayoutId, MonthSlot } from '../types';
+import type { ProjectState, CalendarPageSizeKey, LayoutId, MonthSlot, SplitDirection } from '../types';
 import { exportAsPdf } from '../util/exporter';
 
 interface UIState {
@@ -19,11 +19,13 @@ interface Actions {
   toggleDarkMode(): void;
   setPageSize(size: CalendarPageSizeKey): void;
   setOrientation(orientation: 'portrait' | 'landscape'): void;
+  setSplitDirection(dir: SplitDirection): void;
   setStartMonth(m: number): void;
   setStartYear(y: number): void;
   setShowWeekNumbers(v: boolean): void;
   setShowCommonHolidays(v: boolean): void;
   setIncludeYearlyOverview(v: boolean): void;
+  resetProject(): void;
   setLayoutForMonth(monthIndex: number, layoutId: LayoutId): void;
   setActiveMonth(idx: number): void;
   setActiveSlot(slotId: string): void;
@@ -56,13 +58,27 @@ export const useCalendarStore = create<StoreShape>()(immer((set, get) => ({
   ui: { darkMode: false, activeMonth: 0, exporting: false, activeSlotId: 'main', eventDialog: { open: false, dateISO: null, editEventId: null }, toasts: [], exportProgress: 0 },
   actions: {
     toggleDarkMode() { set(s => { s.ui.darkMode = !s.ui.darkMode; }); },
-    setPageSize(size) { set(s => { s.project.calendar.pageSize = size; }); },
-    setOrientation(o) { set(s => { s.project.calendar.orientation = o; }); },
+  setPageSize(size) { set(s => { 
+      s.project.calendar.pageSize = size; 
+      if (size === '5x7') {
+        s.project.calendar.orientation = 'landscape';
+    s.project.calendar.splitDirection = 'lr';
+        // default to left/right split across months
+        s.project.calendar.layoutStylePerMonth = s.project.calendar.layoutStylePerMonth.map(() => 'single-left');
+      } else {
+        // default orientation for other sizes
+        s.project.calendar.orientation = 'portrait';
+    s.project.calendar.splitDirection = 'tb';
+      }
+    }); },
+  setOrientation(o) { set(s => { s.project.calendar.orientation = o; }); },
+  setSplitDirection(dir) { set(s => { s.project.calendar.splitDirection = dir; }); },
   setStartMonth(m) { set(s => { s.project.calendar.startMonth = Math.max(0, Math.min(11, m)); }); },
   setStartYear(y) { set(s => { s.project.calendar.startYear = y; }); },
   setShowWeekNumbers(v) { set(s => { s.project.calendar.showWeekNumbers = v; }); },
   setShowCommonHolidays(v) { set(s => { s.project.calendar.showCommonHolidays = v; }); },
   setIncludeYearlyOverview(v) { set(s => { s.project.calendar.includeYearlyOverview = v; }); },
+  resetProject() { set(s => { s.project = defaultProject(); s.ui.activeMonth = 0; s.ui.activeSlotId = 'main'; }); },
     setLayoutForMonth(monthIndex, layoutId) { set(s => { s.project.calendar.layoutStylePerMonth[monthIndex] = layoutId; const page = s.project.monthData[monthIndex]; if (page && !page.slots.find((sl: MonthSlot) => sl.slotId === s.ui.activeSlotId)) { s.ui.activeSlotId = page.slots[0]?.slotId || null; } }); },
     setActiveMonth(idx) { set(s => { s.ui.activeMonth = idx; const page = s.project.monthData[idx]; if (page && !page.slots.find((sl: MonthSlot) => sl.slotId === s.ui.activeSlotId)) { s.ui.activeSlotId = page.slots[0]?.slotId || null; } }); },
     setActiveSlot(slotId) { set(s => { s.ui.activeSlotId = slotId; }); },

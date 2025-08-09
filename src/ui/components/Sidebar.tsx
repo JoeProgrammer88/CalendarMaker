@@ -7,6 +7,7 @@ export const Sidebar: React.FC = () => {
   const state = useCalendarStore(s => ({
     pageSize: s.project.calendar.pageSize,
     orientation: s.project.calendar.orientation,
+  splitDirection: s.project.calendar.splitDirection,
   startMonth: s.project.calendar.startMonth,
   startYear: s.project.calendar.startYear,
   showWeekNumbers: s.project.calendar.showWeekNumbers,
@@ -16,6 +17,8 @@ export const Sidebar: React.FC = () => {
     layout: s.project.calendar.layoutStylePerMonth[s.ui.activeMonth],
     setPageSize: s.actions.setPageSize,
     setOrientation: s.actions.setOrientation,
+  setSplitDirection: s.actions.setSplitDirection,
+  addToast: s.actions.addToast,
   setStartMonth: s.actions.setStartMonth,
   setStartYear: s.actions.setStartYear,
   setShowWeekNumbers: s.actions.setShowWeekNumbers,
@@ -23,6 +26,7 @@ export const Sidebar: React.FC = () => {
   setIncludeYearlyOverview: s.actions.setIncludeYearlyOverview,
     setLayoutForMonth: s.actions.setLayoutForMonth,
     setActiveMonth: s.actions.setActiveMonth,
+  resetProject: s.actions.resetProject,
   }));
 
   return (
@@ -54,6 +58,45 @@ export const Sidebar: React.FC = () => {
             <input type="number" value={state.startYear} onChange={e => state.setStartYear(Number(e.target.value))} className="mt-1 w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded px-2 py-1" />
           </label>
         </div>
+        <div className="block">
+          <span className="text-xs font-medium">Split</span>
+          <div className="mt-1 flex items-center gap-2 text-xs">
+            {(() => {
+              const canLR = state.pageSize === '5x7' && state.orientation === 'landscape';
+              return (
+                <>
+                  <label className="inline-flex items-center gap-1">
+                    <input type="radio" name="split" value="tb" checked={state.splitDirection === 'tb'} onChange={() => state.setSplitDirection('tb')} />
+                    Top/Bottom
+                  </label>
+                  <label className={"inline-flex items-center gap-1"}>
+                    <input
+                      type="radio"
+                      name="split"
+                      value="lr"
+                      checked={state.splitDirection === 'lr'}
+                      onChange={() => {
+                        if (canLR) {
+                          state.setSplitDirection('lr');
+                        } else {
+                          // Auto-adjust to 5×7 Landscape and enable L/R
+                          state.setPageSize('5x7');
+                          state.setOrientation('landscape');
+                          state.setSplitDirection('lr');
+                          state.addToast('Switched to 5×7 Landscape for Left/Right split', 'info');
+                        }
+                      }}
+                    />
+                    Left/Right
+                  </label>
+                </>
+              );
+            })()}
+          </div>
+          <div className="mt-1 text-[11px] text-gray-500">
+            Left/Right places photos on the left and the calendar grid on the right. Available on 5×7 Landscape; choosing it will auto-switch if needed.
+          </div>
+        </div>
         <label className="inline-flex items-center gap-2 text-xs">
           <input type="checkbox" checked={state.showWeekNumbers} onChange={e => state.setShowWeekNumbers(e.target.checked)} />
           Show ISO week numbers
@@ -75,9 +118,10 @@ export const Sidebar: React.FC = () => {
         <label className="block">
           <span className="text-xs font-medium">Layout</span>
           <select value={state.layout} onChange={e => state.setLayoutForMonth(state.monthIndex, e.target.value as LayoutId)} className="mt-1 w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded px-2 py-1">
-            {LAYOUTS.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+            {LAYOUTS.filter(l => !l.id.endsWith('-lr') && l.id !== 'single-left').map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
           </select>
         </label>
+  <button onClick={() => { if (confirm('Reset the project to defaults? This will clear photos and events.')) state.resetProject(); }} className="w-full text-xs bg-red-600 text-white rounded py-1 hover:bg-red-700">Reset Project</button>
       </div>
       <div className="p-3 font-semibold uppercase tracking-wide text-xs text-gray-500">Photos</div>
       <div className="px-3 pb-4 space-y-2">

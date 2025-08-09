@@ -12,7 +12,16 @@ export type Orientation = 'portrait' | 'landscape';
 
 export interface LayoutSlot { slotId: string; rect: { x: number; y: number; w: number; h: number; }; }
 export interface LayoutDef { id: LayoutId; name: string; slots: LayoutSlot[]; grid: { x: number; y: number; w: number; h: number; }; supportedOrientations: Orientation[]; }
-export type LayoutId = 'single-top' | 'single-left' | 'full-bleed' | 'dual-split' | 'triple-strip' | 'quad-grid';
+export type LayoutId =
+  | 'single-top'
+  | 'single-left'
+  | 'full-bleed'
+  | 'dual-split'
+  | 'triple-strip'
+  | 'quad-grid'
+  | 'dual-split-lr'
+  | 'triple-strip-lr'
+  | 'quad-grid-lr';
 
 export interface PhotoTransform { scale: number; translateX: number; translateY: number; rotationDegrees: number; }
 // translateX / translateY are normalized offsets relative to slot width/height (1 = 100% of slot dimension)
@@ -22,6 +31,7 @@ export interface MonthPage { index: number; slots: MonthSlot[]; caption?: string
 export interface PhotoMeta { id: string; originalBlobRef?: string; previewBlobRef?: string; name: string; assignedMonths: number[]; previewUrl?: string; }
 export interface EventItem { id: string; dateISO: string; text: string; color?: string; visible: boolean; }
 
-export interface CalendarSettings { startMonth: number; startYear: number; months: number; layoutStylePerMonth: LayoutId[]; pageSize: CalendarPageSizeKey; orientation: Orientation; showWeekNumbers: boolean; showCommonHolidays: boolean; includeYearlyOverview?: boolean; fontFamily: string; }
+export type SplitDirection = 'tb' | 'lr'; // tb: top/bottom, lr: left/right
+export interface CalendarSettings { startMonth: number; startYear: number; months: number; layoutStylePerMonth: LayoutId[]; pageSize: CalendarPageSizeKey; orientation: Orientation; splitDirection: SplitDirection; showWeekNumbers: boolean; showCommonHolidays: boolean; includeYearlyOverview?: boolean; fontFamily: string; }
 
 export interface ProjectState { id: string; meta: { createdAt: string; updatedAt: string; appVersion: string; }; calendar: CalendarSettings; photos: PhotoMeta[]; monthData: MonthPage[]; events: EventItem[]; }

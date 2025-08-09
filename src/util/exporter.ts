@@ -2,6 +2,7 @@ import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import type { ProjectState } from '../types';
 import { computePagePixelSize } from './pageSize';
 import { getLayoutById } from './layouts';
+import { getEffectiveLayout } from './constants';
 import { generateMonthGrid, isoWeekNumber } from './calendar';
 
 function pickStandardFontName(fontFamily: string) {
@@ -134,15 +135,15 @@ export async function exportAsPdf(project: ProjectState, onProgress?: (p: number
     if (onProgress) onProgress(pageCounter / totalPages);
   }
   for (let m = 0; m < project.calendar.months; m++) {
-    const layoutId = project.calendar.layoutStylePerMonth[m];
-    const layout = getLayoutById(layoutId)!;
-    const { pageSize, orientation } = project.calendar;
+  const layoutId = project.calendar.layoutStylePerMonth[m];
+  const { pageSize, orientation, splitDirection } = project.calendar;
+  const layout = getEffectiveLayout(layoutId, splitDirection)!;
     const pt = computePagePixelSize(pageSize, orientation, 72); // PDF points = inches * 72
     const px = computePagePixelSize(pageSize, orientation, 300); // export DPI pixels
     const page = pdf.addPage([pt.width, pt.height]);
     const { width, height } = page.getSize();
 
-    // Draw title
+  // Derive current month/year
   const startMonth = project.calendar.startMonth;
   const startYear = project.calendar.startYear;
   const totalOffset = startMonth + m;
@@ -150,7 +151,6 @@ export async function exportAsPdf(project: ProjectState, onProgress?: (p: number
   const realYear = startYear + Math.floor(totalOffset / 12);
   const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   const monthLabel = `${monthNames[realMonth]} ${realYear}`;
-  page.drawText(monthLabel, { x: 40, y: height - 50, size: 24, font, color: rgb(0,0,0) });
 
     // Render photo slots using per-slot canvas (clipped) then embed as PNG
     const monthPage = project.monthData[m];
@@ -197,24 +197,30 @@ export async function exportAsPdf(project: ProjectState, onProgress?: (p: number
       page.drawImage(embedded, { x, y, width: slotPointW, height: slotPointH });
     }
 
-    // Calendar grid with days and events
+  // Calendar grid with days and events
     const g = layout.grid;
     const gx = g.x * width;
     const gy = height - (g.y * height) - (g.h * height);
     const gw = g.w * width;
     const gh = g.h * height;
+  // Month label inside grid header (bottom half)
+  const labelSize = 16;
+  const labelWidth = font.widthOfTextAtSize(monthLabel, labelSize);
+  const labelX = gx + (gw - labelWidth) / 2;
+  const labelY = gy + gh - labelSize - 2; // near top of header row
+  page.drawText(monthLabel, { x: labelX, y: labelY, size: labelSize, font, color: rgb(0,0,0) });
   page.drawRectangle({ x: gx, y: gy, width: gw, height: gh, borderColor: rgb(0.6,0.6,0.6), borderWidth: 1 });
-    const columns = 7 + (project.calendar.showWeekNumbers ? 1 : 0);
-    const cellW = gw / columns;
-    const cellH = gh / 7; // header + 6 weeks
+  const columns = 7 + (project.calendar.showWeekNumbers ? 1 : 0);
+  const cellW = gw / columns;
+  const cellH = gh / 7; // header + 6 weeks
     const weekDayLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
     // Header labels
     if (project.calendar.showWeekNumbers) {
-      page.drawText('Wk', { x: gx + 4, y: gy + gh - cellH + 6, size: 10, font, color: rgb(0,0,0) });
+      page.drawText('Wk', { x: gx + 4, y: gy + gh - cellH + 4, size: 10, font, color: rgb(0,0,0) });
     }
     weekDayLabels.forEach((d, i) => {
       const cx = gx + (i + (project.calendar.showWeekNumbers ? 1 : 0)) * cellW;
-      page.drawText(d, { x: cx + 4, y: gy + gh - cellH + 6, size: 10, font, color: rgb(0,0,0) });
+      page.drawText(d, { x: cx + 4, y: gy + gh - cellH + 4, size: 10, font, color: rgb(0,0,0) });
     });
     // Grid lines
     for (let r = 0; r <= 7; r++) {
