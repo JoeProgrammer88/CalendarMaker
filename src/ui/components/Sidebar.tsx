@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useCalendarStore } from '../../store/store';
 import { SIZES, LAYOUTS } from '../../util/constants';
 import type { CalendarPageSizeKey, LayoutId } from '../../types';
@@ -53,22 +53,31 @@ export const Sidebar: React.FC = () => {
           </label>
         </div>
   {/* Split controls removed; split direction is derived from page size automatically. */}
-        <label className="inline-flex items-center gap-2 text-xs">
+  <label className="inline-flex items-center gap-2 text-xs">
           <input type="checkbox" checked={state.showWeekNumbers} onChange={e => state.setShowWeekNumbers(e.target.checked)} />
-          Show ISO week numbers
+          <span className="inline-flex items-center gap-1">
+            Show ISO week numbers
+            <InfoTooltip content="Adds an extra leftmost column with ISO week numbers (weeks start on Monday as per ISO 8601) to the monthly grid." />
+          </span>
         </label>
-        <label className="inline-flex items-center gap-2 text-xs">
+  <label className="inline-flex items-center gap-2 text-xs">
           <input type="checkbox" checked={state.includeYearlyOverview} onChange={e => state.setIncludeYearlyOverview(e.target.checked)} />
-          Include yearly overview
+          <span className="inline-flex items-center gap-1">
+            Include yearly overview
+            <InfoTooltip content="Adds a single-page overview with mini calendars for all months." />
+          </span>
         </label>
         <div className="space-y-1">
           <label className="inline-flex items-center gap-2 text-xs">
             <input type="checkbox" checked={state.includeCoverPage} onChange={e => state.setIncludeCoverPage(e.target.checked)} />
-            Include cover page
+            <span className="inline-flex items-center gap-1">
+              Include cover page
+              <InfoTooltip content="Adds a cover page before the months. Choose a style below." />
+            </span>
           </label>
           {state.includeCoverPage && (
             <label className="block">
-              <span className="text-xs font-medium">Cover Style</span>
+              <span className="text-xs font-medium inline-flex items-center gap-1">Cover Style <InfoTooltip content="Select the cover layout: a large single photo, or a 4×3 grid of month thumbnails." /></span>
               <select value={state.coverStyle} onChange={e => state.setCoverStyle(e.target.value as any)} className="mt-1 w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded px-2 py-1">
                 <option value="large-photo">Large Photo (90%)</option>
                 <option value="grid-4x3">4×3 Month Grid</option>
@@ -76,9 +85,12 @@ export const Sidebar: React.FC = () => {
             </label>
           )}
         </div>
-        <label className="inline-flex items-center gap-2 text-xs">
+  <label className="inline-flex items-center gap-2 text-xs">
           <input type="checkbox" checked={state.showCommonHolidays} onChange={e => state.setShowCommonHolidays(e.target.checked)} />
-          Show common holidays (overview)
+          <span className="inline-flex items-center gap-1">
+            Show common holidays (overview)
+            <InfoTooltip content="Highlights a few common fixed-date holidays in the yearly overview (demo: Jan 1, Jul 4, Dec 25)." />
+          </span>
         </label>
         <label className="block">
           <span className="text-xs font-medium">Active Month</span>
@@ -118,6 +130,38 @@ export const Sidebar: React.FC = () => {
         <EventList />
       </div>
     </aside>
+  );
+};
+
+// Small inline tooltip with a “?” trigger. Keeps native title on parent for hover support.
+const InfoTooltip: React.FC<{ content: string }> = ({ content }) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (!ref.current) return;
+      if (!ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [open]);
+  return (
+    <span className="relative inline-flex items-center" ref={ref as any}>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
+        aria-label="More info"
+      >
+        ?
+      </button>
+      {open && (
+        <div className="absolute z-20 top-5 left-0 inline-block min-w-[20rem] max-w-[72rem] text-[11px] bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded shadow p-2 whitespace-normal break-words">
+          {content}
+        </div>
+      )}
+    </span>
   );
 };
 
