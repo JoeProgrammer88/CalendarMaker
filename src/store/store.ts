@@ -211,8 +211,10 @@ export const useCalendarStore = create<StoreShape>()(immer((set, get) => ({
           // Normalize orientation based on page size (5x7 => landscape, others => portrait)
           if (loaded.calendar.pageSize === '5x7') {
             loaded.calendar.orientation = 'landscape';
+            loaded.calendar.splitDirection = 'lr';
           } else {
             loaded.calendar.orientation = 'portrait';
+            loaded.calendar.splitDirection = 'tb';
           }
           s.project = loaded; s.ui.activeMonth = 0; s.ui.activeSlotId = 'main';
         });

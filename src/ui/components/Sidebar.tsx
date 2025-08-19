@@ -17,8 +17,7 @@ export const Sidebar: React.FC = () => {
     monthIndex: s.ui.activeMonth,
     layout: s.project.calendar.layoutStylePerMonth[s.ui.activeMonth],
     setPageSize: s.actions.setPageSize,
-  setSplitDirection: s.actions.setSplitDirection,
-  addToast: s.actions.addToast,
+  // setSplitDirection removed from UI; split handled automatically by page size
   setStartMonth: s.actions.setStartMonth,
   setStartYear: s.actions.setStartYear,
   setShowWeekNumbers: s.actions.setShowWeekNumbers,
@@ -53,44 +52,7 @@ export const Sidebar: React.FC = () => {
             <input type="number" value={state.startYear} onChange={e => state.setStartYear(Number(e.target.value))} className="mt-1 w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded px-2 py-1" />
           </label>
         </div>
-        <div className="block">
-          <span className="text-xs font-medium">Split</span>
-          <div className="mt-1 flex items-center gap-2 text-xs">
-            {(() => {
-              const canLR = state.pageSize === '5x7';
-              return (
-                <>
-                  <label className="inline-flex items-center gap-1">
-                    <input type="radio" name="split" value="tb" checked={state.splitDirection === 'tb'} onChange={() => state.setSplitDirection('tb')} />
-                    Top/Bottom
-                  </label>
-                  <label className={"inline-flex items-center gap-1"}>
-                    <input
-                      type="radio"
-                      name="split"
-                      value="lr"
-                      checked={state.splitDirection === 'lr'}
-                      onChange={() => {
-                        if (canLR) {
-                          state.setSplitDirection('lr');
-                        } else {
-                          // Auto-adjust to 5×7 Landscape and enable L/R
-                          state.setPageSize('5x7');
-                          state.setSplitDirection('lr');
-                          state.addToast('Switched to 5×7 Landscape for Left/Right split', 'info');
-                        }
-                      }}
-                    />
-                    Left/Right
-                  </label>
-                </>
-              );
-            })()}
-          </div>
-          <div className="mt-1 text-[11px] text-gray-500">
-            Left/Right places photos on the left and the calendar grid on the right. Available on 5×7 Landscape; choosing it will auto-switch if needed.
-          </div>
-        </div>
+  {/* Split controls removed; split direction is derived from page size automatically. */}
         <label className="inline-flex items-center gap-2 text-xs">
           <input type="checkbox" checked={state.showWeekNumbers} onChange={e => state.setShowWeekNumbers(e.target.checked)} />
           Show ISO week numbers
