@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { useCalendarStore } from '../../store/store';
 import { getLayoutById } from '../../util/layouts';
 import { getEffectiveLayout } from '../../util/constants';
@@ -6,7 +6,7 @@ import { computePagePixelSize } from '../../util/pageSize';
 import { generateMonthGrid, isoWeekNumber } from '../../util/calendar';
 
 export const PagePreview: React.FC = () => {
-  const { monthIndex, layoutId, pageSizeKey, orientation, splitDirection, photos, monthPage, activeSlotId, setActiveSlot, startMonth, startYear, showWeekNumbers, fontFamily, allEvents, openEventDialog } = useCalendarStore(s => ({
+  const { monthIndex, layoutId, pageSizeKey, orientation, splitDirection, photos, monthPage, activeSlotId, setActiveSlot, updateTransform, startMonth, startYear, showWeekNumbers, fontFamily, allEvents, openEventDialog } = useCalendarStore(s => ({
     monthIndex: s.ui.activeMonth,
     layoutId: s.project.calendar.layoutStylePerMonth[s.ui.activeMonth],
     pageSizeKey: s.project.calendar.pageSize,
@@ -16,6 +16,7 @@ export const PagePreview: React.FC = () => {
     monthPage: s.project.monthData[s.ui.activeMonth],
     activeSlotId: s.ui.activeSlotId,
     setActiveSlot: s.actions.setActiveSlot,
+    updateTransform: s.actions.updateActiveSlotTransform,
     startMonth: s.project.calendar.startMonth,
     startYear: s.project.calendar.startYear,
     showWeekNumbers: s.project.calendar.showWeekNumbers,
@@ -25,6 +26,24 @@ export const PagePreview: React.FC = () => {
   }));
   const layout = getEffectiveLayout(layoutId, splitDirection);
   const size = computePagePixelSize(pageSizeKey, orientation, 100); // preview DPI
+
+  // Drag state for panning photos
+  const dragRef = useRef<{
+    active: boolean;
+    pointerId: number | null;
+    startX: number;
+    startY: number;
+    startTranslateX: number;
+    startTranslateY: number;
+    slotId: string | null;
+    slotWidth: number;
+    slotHeight: number;
+  }>({ active: false, pointerId: null, startX: 0, startY: 0, startTranslateX: 0, startTranslateY: 0, slotId: null, slotWidth: 1, slotHeight: 1 });
+
+  // Build a signature so memo invalidates when any slot transform changes
+  const transformsSig = monthPage?.slots
+    ? monthPage.slots.map(s => `${s.slotId}:${s.transform.scale}:${s.transform.translateX}:${s.transform.translateY}:${s.transform.rotationDegrees}`).join('|')
+    : '';
 
   const slotNodes = useMemo(() => {
     if (!layout) return null;
@@ -48,15 +67,56 @@ export const PagePreview: React.FC = () => {
         img = <img draggable={false} src={photo.previewUrl} alt={photo.name} className="absolute inset-0 w-full h-full object-cover pointer-events-none" style={style} />;
       }
       const active = slot.slotId === activeSlotId;
+      const onPointerDown: React.PointerEventHandler<HTMLDivElement> = (e) => {
+        setActiveSlot(slot.slotId);
+        // Ignore drags initiated on control UI
+        const target = e.target as HTMLElement;
+        if (target && target.closest('[data-transform-controls]')) return;
+        if (!monthSlot) return;
+        try { (e.currentTarget as any).setPointerCapture?.(e.pointerId); } catch {}
+        dragRef.current = {
+          active: true,
+          pointerId: e.pointerId,
+          startX: e.clientX,
+          startY: e.clientY,
+          startTranslateX: monthSlot.transform.translateX,
+          startTranslateY: monthSlot.transform.translateY,
+          slotId: slot.slotId,
+          slotWidth: w,
+          slotHeight: h,
+        };
+      };
+      const onPointerMove: React.PointerEventHandler<HTMLDivElement> = (e) => {
+        const d = dragRef.current;
+        if (!d.active || d.pointerId !== e.pointerId || d.slotId !== slot.slotId) return;
+        const dx = e.clientX - d.startX;
+        const dy = e.clientY - d.startY;
+        const nx = d.startTranslateX + (dx / d.slotWidth);
+        const ny = d.startTranslateY + (dy / d.slotHeight);
+        // Update active slot transform with absolute normalized translate values
+        updateTransform({ translateX: nx, translateY: ny });
+      };
+      const endDrag = () => { dragRef.current.active = false; dragRef.current.pointerId = null; };
+      const onPointerUp: React.PointerEventHandler<HTMLDivElement> = () => endDrag();
+      const onPointerCancel: React.PointerEventHandler<HTMLDivElement> = () => endDrag();
       return (
-        <div key={slot.slotId} onClick={() => setActiveSlot(slot.slotId)} className={"absolute overflow-hidden cursor-pointer group " + (active ? 'ring-2 ring-blue-500' : 'border border-blue-400/60')} style={{ left, top, width: w, height: h }}>
+        <div
+          key={slot.slotId}
+          onClick={() => setActiveSlot(slot.slotId)}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerCancel}
+          className={"absolute overflow-hidden group " + (active ? 'ring-2 ring-blue-500 cursor-grabbing' : 'border border-blue-400/60 cursor-grab')}
+          style={{ left, top, width: w, height: h, touchAction: 'none' }}
+        >
           {img}
           {!img && <div className="w-full h-full flex items-center justify-center text-[11px] text-blue-500/70">Click to assign</div>}
           {active && <TransformControls slotId={slot.slotId} />}
         </div>
       );
     });
-  }, [layout, size, monthPage, photos, activeSlotId, setActiveSlot]);
+  }, [layout, size, monthPage, photos, activeSlotId, setActiveSlot, updateTransform, transformsSig]);
 
   const { gridNode } = useMemo(() => {
     if (!layout) return { gridNode: null };
@@ -174,13 +234,9 @@ const TransformControls: React.FC<{ slotId: string }> = () => {
     };
   });
   return (
-    <div className="absolute bottom-1 left-1 right-1 flex flex-wrap gap-1 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm p-1 rounded shadow text-[10px] text-gray-800 dark:text-gray-200">
-      <button onClick={() => update({ scale: transform.scale * 1.1 })} className="px-1 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">Zoom +</button>
-      <button onClick={() => update({ scale: transform.scale / 1.1 })} className="px-1 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">Zoom -</button>
-      <button onClick={() => update({ translateY: transform.translateY - 0.02 })} className="px-1 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">Up</button>
-      <button onClick={() => update({ translateY: transform.translateY + 0.02 })} className="px-1 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">Down</button>
-      <button onClick={() => update({ translateX: transform.translateX - 0.02 })} className="px-1 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">Left</button>
-      <button onClick={() => update({ translateX: transform.translateX + 0.02 })} className="px-1 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">Right</button>
+    <div data-transform-controls className="absolute bottom-1 left-1 right-1 flex flex-wrap gap-1 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm p-1 rounded shadow text-[10px] text-gray-800 dark:text-gray-200">
+  <button onClick={() => update({ scale: transform.scale * 1.1 })} className="px-1 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">Zoom +</button>
+  <button onClick={() => update({ scale: transform.scale / 1.1 })} className="px-1 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">Zoom -</button>
       <button onClick={() => update({ rotationDegrees: transform.rotationDegrees + 90 })} className="px-1 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">Rotate</button>
       <button onClick={() => reset()} className="px-1 py-0.5 bg-red-500 text-white rounded">Reset</button>
     </div>
