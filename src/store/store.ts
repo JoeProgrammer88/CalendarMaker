@@ -207,7 +207,15 @@ export const useCalendarStore = create<StoreShape>()(immer((set, get) => ({
       if (!lastId) return;
       const loaded = await loadProjectById(lastId);
       if (loaded) {
-        set(s => { s.project = loaded; s.ui.activeMonth = 0; s.ui.activeSlotId = 'main'; });
+        set(s => {
+          // Normalize orientation based on page size (5x7 => landscape, others => portrait)
+          if (loaded.calendar.pageSize === '5x7') {
+            loaded.calendar.orientation = 'landscape';
+          } else {
+            loaded.calendar.orientation = 'portrait';
+          }
+          s.project = loaded; s.ui.activeMonth = 0; s.ui.activeSlotId = 'main';
+        });
       }
   },
   undo() { set(s => { const prev = s.ui.history.pop(); if (prev) { s.ui.future.push(safeClone(get().project)); s.project = prev; } }); },

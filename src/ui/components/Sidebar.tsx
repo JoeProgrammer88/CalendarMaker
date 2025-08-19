@@ -6,7 +6,6 @@ import type { CalendarPageSizeKey, LayoutId } from '../../types';
 export const Sidebar: React.FC = () => {
   const state = useCalendarStore(s => ({
     pageSize: s.project.calendar.pageSize,
-    orientation: s.project.calendar.orientation,
   splitDirection: s.project.calendar.splitDirection,
   startMonth: s.project.calendar.startMonth,
   startYear: s.project.calendar.startYear,
@@ -18,7 +17,6 @@ export const Sidebar: React.FC = () => {
     monthIndex: s.ui.activeMonth,
     layout: s.project.calendar.layoutStylePerMonth[s.ui.activeMonth],
     setPageSize: s.actions.setPageSize,
-    setOrientation: s.actions.setOrientation,
   setSplitDirection: s.actions.setSplitDirection,
   addToast: s.actions.addToast,
   setStartMonth: s.actions.setStartMonth,
@@ -43,13 +41,6 @@ export const Sidebar: React.FC = () => {
             {Object.keys(SIZES).map(k => <option key={k} value={k}>{k}</option>)}
           </select>
         </label>
-        <label className="block">
-          <span className="text-xs font-medium">Orientation</span>
-          <select value={state.orientation} onChange={e => state.setOrientation(e.target.value as any)} className="mt-1 w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded px-2 py-1">
-            <option value="portrait">Portrait</option>
-            <option value="landscape">Landscape</option>
-          </select>
-        </label>
         <div className="grid grid-cols-2 gap-2">
           <label className="block">
             <span className="text-xs font-medium">Start Month</span>
@@ -66,7 +57,7 @@ export const Sidebar: React.FC = () => {
           <span className="text-xs font-medium">Split</span>
           <div className="mt-1 flex items-center gap-2 text-xs">
             {(() => {
-              const canLR = state.pageSize === '5x7' && state.orientation === 'landscape';
+              const canLR = state.pageSize === '5x7';
               return (
                 <>
                   <label className="inline-flex items-center gap-1">
@@ -85,7 +76,6 @@ export const Sidebar: React.FC = () => {
                         } else {
                           // Auto-adjust to 5×7 Landscape and enable L/R
                           state.setPageSize('5x7');
-                          state.setOrientation('landscape');
                           state.setSplitDirection('lr');
                           state.addToast('Switched to 5×7 Landscape for Left/Right split', 'info');
                         }
