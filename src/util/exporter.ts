@@ -349,25 +349,33 @@ export async function exportAsPdf(project: ProjectState, onProgress?: (p: number
     }
 
   // Calendar grid with days and events
-    const g = layout.grid;
-    const gx = g.x * width;
-    const gy = height - (g.y * height) - (g.h * height);
-    const gw = g.w * width;
-    const gh = g.h * height;
+  const g = layout.grid;
+  const gx = g.x * width;
+  // Apply 0.25 inch top margin for 5x7 page size on the text (grid) side only
+  const topMarginPt = project.calendar.pageSize === '5x7' ? (0.25 * 72) : 0;
+  // Position the grid so the entire grid (including the header) is shifted DOWN by the top margin on 5x7
+  // Keep the bottom the same and reduce height so the top drops by topMarginPt
+  const gy = height - (g.y * height) - (g.h * height);
+  const gw = g.w * width;
+  const gh = (g.h * height) - topMarginPt;
   // Compute header metrics first
   const columns = 7 + (project.calendar.showWeekNumbers ? 1 : 0);
   const cellW = gw / columns;
   const cellH = gh / 7; // header + 6 weeks
   // Header background fill (draw BEFORE text so it doesn't cover the label)
-  page.drawRectangle({ x: gx, y: gy + gh - cellH, width: gw, height: cellH, color: rgb(0.96,0.96,0.96) });
+  // Extend upward into the top margin for 5x7 so the gray covers the gap above the header, not week 1
+  page.drawRectangle({ x: gx, y: gy + gh - cellH, width: gw, height: cellH + topMarginPt, color: rgb(0.96,0.96,0.96) });
+  // Shade the week-number header cell slightly differently (to match preview), if enabled
+  if (project.calendar.showWeekNumbers) {
+    page.drawRectangle({ x: gx, y: gy + gh - cellH, width: cellW, height: cellH, color: rgb(0.98,0.98,0.98) });
+  }
   // Month label inside grid header (bottom half)
   const labelSize = 16;
   const labelWidth = font.widthOfTextAtSize(monthLabel, labelSize);
   const labelX = gx + (gw - labelWidth) / 2;
   const labelY = gy + gh - labelSize - 2; // near top of header row
   page.drawText(monthLabel, { x: labelX, y: labelY, size: labelSize, font, color: rgb(0,0,0) });
-  // Outer grid border
-  page.drawRectangle({ x: gx, y: gy, width: gw, height: gh, borderColor: rgb(0.6,0.6,0.6), borderWidth: 1 });
+  // Note: Do not draw an outer border across the full grid, to avoid vertical lines in the header area.
     const weekDayLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
     // Header labels
     if (project.calendar.showWeekNumbers) {
@@ -375,20 +383,21 @@ export async function exportAsPdf(project: ProjectState, onProgress?: (p: number
     }
     weekDayLabels.forEach((d, i) => {
       const cx = gx + (i + (project.calendar.showWeekNumbers ? 1 : 0)) * cellW;
-      page.drawText(d, { x: cx + 4, y: gy + gh - cellH + 4, size: 10, font, color: rgb(0,0,0) });
+      // Add a bit more gap below the month label
+      page.drawText(d, { x: cx + 4, y: gy + gh - cellH + 8, size: 10, font, color: rgb(0,0,0) });
     });
-    // Grid lines (skip header row separators)
-      // horizontal lines: draw all except the one directly under the header (r=6)
+    // Grid lines
+      // horizontal lines: draw all rows except the top-of-header line (r=7); include header bottom (r=6)
       for (let r = 0; r <= 7; r++) {
-        if (r === 6) continue; // skip header bottom line
+        if (r === 7) continue; // no top border on header
         const y = gy + r * cellH;
         page.drawLine({ start: { x: gx, y }, end: { x: gx + gw, y }, thickness: 0.5, color: rgb(0.8,0.8,0.8) });
       }
-      // vertical lines: draw full height but omit overpainting header bottom line by drawing from just below header
-      const headerBottomY = gy + cellH;
+  // vertical lines: draw only for the days area (exclude the header entirely)
+  const headerBottomY = gy + gh - cellH; // bottom edge of header row
       for (let c = 0; c <= columns; c++) {
         const x = gx + c * cellW;
-        page.drawLine({ start: { x, y: headerBottomY }, end: { x, y: gy + gh }, thickness: 0.5, color: rgb(0.8,0.8,0.8) });
+        page.drawLine({ start: { x, y: gy }, end: { x, y: headerBottomY }, thickness: 0.5, color: rgb(0.8,0.8,0.8) });
       }
 
     // Days and events (truncate to 2 lines)
@@ -396,8 +405,12 @@ export async function exportAsPdf(project: ProjectState, onProgress?: (p: number
     const events = project.events.filter(e => e.visible && e.dateISO.startsWith(`${realYear}-${String(realMonth+1).padStart(2,'0')}`));
     for (let w = 0; w < grid.weeks.length; w++) {
       const week = grid.weeks[w];
-      // Week number column
+      // Week number column (shade background like preview and draw the ISO week)
       if (project.calendar.showWeekNumbers) {
+        const cx = gx;
+        const cy = gy + gh - (w + 2) * cellH; // bottom of this week row
+        // subtle background shade for the Wk column
+        page.drawRectangle({ x: cx, y: cy, width: cellW, height: cellH, color: rgb(0.98,0.98,0.98) });
         const first = week.find(c => c?.date)?.date;
         if (first) {
           const wk = isoWeekNumber(first);

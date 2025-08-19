@@ -25,7 +25,8 @@ export const PagePreview: React.FC = () => {
   openEventDialog: s.actions.openEventDialog
   }));
   const layout = getEffectiveLayout(layoutId, splitDirection);
-  const size = computePagePixelSize(pageSizeKey, orientation, 100); // preview DPI
+  const previewDpi = 100;
+  const size = computePagePixelSize(pageSizeKey, orientation, previewDpi); // preview DPI
 
   // Drag state for panning photos
   const dragRef = useRef<{
@@ -128,28 +129,31 @@ export const PagePreview: React.FC = () => {
   const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   const monthLabel = `${monthNames[realMonth]} ${realYear}`;
     const weekDayLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-    const columns = 7 + (showWeekNumbers ? 1 : 0);
-    const cellW = (layout.grid.w * size.width) / columns;
-    const cellH = (layout.grid.h * size.height) / 7; // row 0 header, rows 1-6 weeks
-    const left = layout.grid.x * size.width;
-    const top = layout.grid.y * size.height;
+  const columns = 7 + (showWeekNumbers ? 1 : 0);
+  const cellW = (layout.grid.w * size.width) / columns;
+  // Apply 1/4" top margin for 5x7 on the text (grid) side only
+  const topMarginPx = pageSizeKey === '5x7' ? (0.25 * previewDpi) : 0;
+  const left = layout.grid.x * size.width;
+  const top = layout.grid.y * size.height + topMarginPx;
+  const gridHeight = (layout.grid.h * size.height) - topMarginPx;
+  const cellH = gridHeight / 7; // row 0 header, rows 1-6 weeks
 
   const headerLeft = Math.ceil(left);
   const headerWidth = Math.max(0, Math.floor(layout.grid.w * size.width) - 1);
   const header = [
-      // Shaded header background spanning the full header row
-  <div key="header-bg" className="absolute bg-gray-100 dark:bg-gray-800/80" style={{ left: headerLeft, top: top, width: headerWidth, height: cellH }} />,
+      // Shaded header background spanning the full header row and filling the 1/4" margin for 5x7
+  <div key="header-bg" className="absolute bg-gray-100 dark:bg-gray-800/80" style={{ left: headerLeft, top: top - (pageSizeKey === '5x7' ? topMarginPx : 0), width: headerWidth, height: cellH + (pageSizeKey === '5x7' ? topMarginPx : 0) }} />,
       // Month label inside the grid header (bottom half of the page)
   <div key="month-label" className="absolute text-center text-[14px] font-semibold" style={{ left: headerLeft, top: top + 2, width: headerWidth }}>
         {monthLabel}
       </div>,
    ...(showWeekNumbers ? [
      <div key="wk" className="flex items-start justify-center text-[10px] font-medium bg-gray-50 dark:bg-gray-900"
-       style={{ position:'absolute', left: headerLeft, top, width: cellW, height: cellH, paddingTop: 18 }}>Wk</div>
+       style={{ position:'absolute', left: headerLeft, top, width: cellW, height: cellH, paddingTop: 22 }}>Wk</div>
       ] : []),
       ...weekDayLabels.map((d,i) => (
      <div key={d} className="flex items-start justify-center text-[10px] font-medium"
-       style={{ position:'absolute', left: headerLeft + (i + (showWeekNumbers?1:0))*cellW, top, width: cellW, height: cellH, paddingTop: 18 }}>{d}</div>
+       style={{ position:'absolute', left: headerLeft + (i + (showWeekNumbers?1:0))*cellW, top, width: cellW, height: cellH, paddingTop: 22 }}>{d}</div>
       ))
     ];
 
