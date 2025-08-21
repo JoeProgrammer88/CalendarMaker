@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { computePagePixelSize } from '../../util/pageSize';
 import { useCalendarStore } from '../../store/store';
 import { SIZES, LAYOUTS } from '../../util/constants';
 import type { CalendarPageSizeKey, LayoutId } from '../../types';
@@ -13,6 +14,8 @@ export const Sidebar: React.FC = () => {
   includeYearlyOverview: s.project.calendar.includeYearlyOverview ?? false,
   includeCoverPage: s.project.calendar.includeCoverPage ?? false,
   coverStyle: s.project.calendar.coverStyle ?? 'large-photo',
+  coverPhotoId: s.project.calendar.coverPhotoId,
+  coverTransform: s.project.calendar.coverTransform,
   showCommonHolidays: s.project.calendar.showCommonHolidays,
     monthIndex: s.ui.activeMonth,
     layout: s.project.calendar.layoutStylePerMonth[s.ui.activeMonth],
@@ -25,10 +28,15 @@ export const Sidebar: React.FC = () => {
   setIncludeYearlyOverview: s.actions.setIncludeYearlyOverview,
   setIncludeCoverPage: s.actions.setIncludeCoverPage,
   setCoverStyle: s.actions.setCoverStyle,
+  setCoverPhoto: s.actions.setCoverPhoto,
+  updateCoverTransform: s.actions.updateCoverTransform,
+  resetCoverTransform: s.actions.resetCoverTransform,
     setLayoutForMonth: s.actions.setLayoutForMonth,
     setActiveMonth: s.actions.setActiveMonth,
   resetProject: s.actions.resetProject,
   }));
+  const coverPhotos = useCalendarStore(s => s.project.coverPhotos ?? []);
+  const photos = useCalendarStore(s => s.project.photos);
 
   return (
   <aside className="w-64 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col text-sm text-gray-800 dark:text-gray-100">
@@ -82,6 +90,38 @@ export const Sidebar: React.FC = () => {
                 <option value="large-photo">Large Photo (90%)</option>
                 <option value="grid-4x3">4×3 Month Grid</option>
               </select>
+        {state.coverStyle === 'large-photo' && (
+                <div className="mt-2 space-y-2">
+                  <div className="text-xs font-medium">Cover Photo</div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(coverPhotos.length > 0 ? coverPhotos : photos).map(p => (
+                      <button key={p.id} type="button" onClick={() => state.setCoverPhoto(p.id)} className={
+                        'relative aspect-square rounded overflow-hidden border ' +
+                        (state.coverPhotoId === p.id ? 'border-blue-600 ring-1 ring-blue-600' : 'border-gray-300 dark:border-gray-600')
+                      }>
+                        {p.previewUrl ? <img src={p.previewUrl} alt={p.name} className="object-cover w-full h-full" /> : <span className="text-[10px] p-1">{p.name}</span>}
+                      </button>
+                    ))}
+                    {(coverPhotos.length === 0 && photos.length === 0) && (
+                      <div className="col-span-3 text-[11px] text-gray-500 dark:text-gray-400">No photos yet. Upload some below, or add cover‑specific photos.</div>
+                    )}
+                  </div>
+                  <label className="block text-xs font-medium cursor-pointer text-gray-800 dark:text-gray-100">
+                    <span className="block mb-1">Add Cover Photos</span>
+                    <input type="file" accept="image/*" multiple className="hidden" onChange={e => { if (e.target.files) useCalendarStore.getState().actions.addCoverPhotos(e.target.files); e.target.value=''; }} />
+                    <div className="border border-dashed border-gray-400 dark:border-gray-600 rounded p-2 text-center text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-900">Click to choose</div>
+                  </label>
+          {state.coverPhotoId && (
+                    <div>
+                      <div className="text-[11px] mb-1 text-gray-600 dark:text-gray-300">Selected cover preview</div>
+            <CoverPreview photoId={state.coverPhotoId} />
+                      <div className="mt-2">
+                        <button type="button" onClick={() => state.setCoverPhoto(null)} className="text-xs text-red-600 hover:underline">Clear cover photo</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </label>
           )}
         </div>
@@ -130,6 +170,59 @@ export const Sidebar: React.FC = () => {
         <EventList />
       </div>
     </aside>
+  );
+};
+
+// Interactive cover preview with pan/zoom/rotate controls (normalized like month slots)
+const CoverPreview: React.FC<{ photoId: string }> = ({ photoId }) => {
+  const photo = useCalendarStore(s => (s.project.coverPhotos?.find(p => p.id === photoId)) || s.project.photos.find(p => p.id === photoId));
+  const t = useCalendarStore(s => s.project.calendar.coverTransform || { scale:1, translateX:0, translateY:0, rotationDegrees:0 });
+  const { pageSize, orientation } = useCalendarStore(s => ({ pageSize: s.project.calendar.pageSize, orientation: s.project.calendar.orientation }));
+  const update = useCalendarStore(s => s.actions.updateCoverTransform);
+  const reset = useCalendarStore(s => s.actions.resetCoverTransform);
+  const dragRef = useRef<{ active:boolean; startX:number; startY:number; startTX:number; startTY:number }|null>(null);
+  const onPointerDown: React.PointerEventHandler<HTMLDivElement> = (e) => {
+    const target = e.target as HTMLElement;
+    if (target?.closest('[data-transform-controls]')) return; // allow button clicks
+    const el = e.currentTarget as HTMLDivElement;
+    try { (el as any).setPointerCapture?.(e.pointerId); } catch {}
+    dragRef.current = { active:true, startX:e.clientX, startY:e.clientY, startTX: t.translateX || 0, startTY: t.translateY || 0 };
+  };
+  const onPointerMove: React.PointerEventHandler<HTMLDivElement> = (e) => {
+    const d = dragRef.current; if (!d?.active) return;
+    const wrap = e.currentTarget.getBoundingClientRect();
+    const nx = d.startTX + (e.clientX - d.startX) / wrap.width;
+    const ny = d.startTY + (e.clientY - d.startY) / wrap.height;
+    update({ translateX: nx, translateY: ny });
+  };
+  const end = () => { if (dragRef.current) dragRef.current.active = false; };
+  if (!photo?.previewUrl) return null;
+  const px = computePagePixelSize(pageSize, orientation, 100);
+  const tx = (t.translateX || 0) * 100; // percent for CSS translate (relative to element size)
+  const ty = (t.translateY || 0) * 100;
+  const style: React.CSSProperties = {
+    // Compose centering first, then user pan (percent), then scale/rotate
+    transform: `translate(-50%, -50%) translate(${tx}%, ${ty}%) scale(${t.scale || 1}) rotate(${t.rotationDegrees || 0}deg)`,
+    transformOrigin: 'center center'
+  };
+  const onWheel: React.WheelEventHandler<HTMLDivElement> = (e) => {
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 1.1 : 1/1.1;
+    update({ scale: (t.scale || 1) * factor });
+  };
+  return (
+    <div className="w-full rounded overflow-hidden border border-gray-300 dark:border-gray-600 bg-black/10 relative select-none" style={{ aspectRatio: `${px.width} / ${px.height}` }}
+         onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={end} onPointerCancel={end}>
+      <div className="absolute inset-0">
+  <img src={photo.previewUrl} alt={photo.name} className="absolute left-1/2 top-1/2 w-[120%] h-[120%] object-cover pointer-events-none" style={style} />
+      </div>
+      <div className="absolute bottom-1 left-1 right-1 flex gap-1 justify-start bg-white/80 dark:bg-gray-900/80 backdrop-blur px-1 py-0.5 rounded text-[10px] pointer-events-auto" data-transform-controls onWheel={onWheel}>
+        <button onClick={() => update({ scale: (t.scale || 1) * 1.1 })} className="px-1 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">Zoom +</button>
+        <button onClick={() => update({ scale: (t.scale || 1) / 1.1 })} className="px-1 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">Zoom -</button>
+        <button onClick={() => update({ rotationDegrees: (t.rotationDegrees || 0) + 90 })} className="px-1 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">Rotate</button>
+        <button onClick={() => reset()} className="px-1 py-0.5 bg-red-500 text-white rounded">Reset</button>
+      </div>
+    </div>
   );
 };
 

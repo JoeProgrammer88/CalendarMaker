@@ -127,8 +127,14 @@ export async function exportAsPdf(project: ProjectState, onProgress?: (p: number
     const endText = `${monthNames[endMonth0]} ${endYear}`;
 
   if ((project.calendar.coverStyle ?? 'large-photo') === 'large-photo') {
-      // Use first assigned photo or any available as cover
-      const anyPhoto = project.photos.find(p => !!p.previewUrl);
+      // Use dedicated cover photo if set; otherwise fallback to any available
+      const coverId = project.calendar.coverPhotoId;
+        let anyPhoto = coverId
+          ? (project.coverPhotos?.find(p => p.id === coverId) || project.photos.find(p => p.id === coverId))
+          : undefined;
+        if (!anyPhoto) {
+          anyPhoto = (project.coverPhotos?.find(p => !!p.previewUrl)) || project.photos.find(p => !!p.previewUrl);
+        }
       if (anyPhoto?.previewUrl) {
         const img = await loadImage(anyPhoto.previewUrl);
         // draw covering the top 90%
@@ -141,10 +147,16 @@ export async function exportAsPdf(project: ProjectState, onProgress?: (p: number
         canvas.height = Math.max(1, Math.round(coverH * scale));
         const ctx = canvas.getContext('2d')!;
         ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+        const t = project.calendar.coverTransform || { scale:1, translateX:0, translateY:0, rotationDegrees:0 };
         const baseScale = Math.max(canvas.width / img.width, canvas.height / img.height);
+        const s = baseScale * (t.scale || 1);
+        const tx = (t.translateX || 0) * canvas.width;
+        const ty = (t.translateY || 0) * canvas.height;
+        const rad = (t.rotationDegrees || 0) * Math.PI/180;
         ctx.save();
-        ctx.translate(canvas.width/2, canvas.height/2);
-        ctx.scale(baseScale, baseScale);
+        ctx.translate(canvas.width/2 + tx, canvas.height/2 + ty);
+        if (rad) ctx.rotate(rad);
+        ctx.scale(s, s);
         ctx.drawImage(img, -img.width/2, -img.height/2);
         ctx.restore();
         const png = await canvasToPngBytes(canvas);
