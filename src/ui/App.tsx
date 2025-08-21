@@ -34,7 +34,7 @@ export const App: React.FC = () => {
   const realMonth = totalOffset % 12;
   const realYear = startYear + Math.floor(totalOffset / 12);
   return (
-    <div className={dark ? 'dark h-full flex flex-col' : 'h-full flex flex-col'}>
+    <div className={dark ? 'dark min-h-screen flex flex-col' : 'min-h-screen flex flex-col'}>
       <header className="flex items-center justify-between px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100">
         <h1 className="font-semibold text-lg text-gray-900 dark:text-gray-100">Calendar Customizer (MVP)</h1>
         <div className="text-sm text-gray-600 dark:text-gray-200">Viewing: {['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][realMonth]} {realYear}</div>
@@ -44,7 +44,7 @@ export const App: React.FC = () => {
       </header>
       <div className="flex flex-1 min-h-0">
         <Sidebar />
-  <main className="flex-1 min-h-0 overflow-auto bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-100 p-4">
+        <main className="flex-1 min-h-0 overflow-auto bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-100 p-4">
           <PagePreview />
         </main>
         <RightPanel />

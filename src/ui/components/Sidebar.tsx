@@ -39,7 +39,7 @@ export const Sidebar: React.FC = () => {
   const photos = useCalendarStore(s => s.project.photos);
 
   return (
-  <aside className="w-64 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col text-sm text-gray-800 dark:text-gray-100">
+  <aside className="w-64 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col text-sm text-gray-800 dark:text-gray-100 min-h-0 overflow-auto">
       <div className="p-3 font-semibold uppercase tracking-wide text-xs text-gray-600 dark:text-gray-300">Project</div>
       <div className="px-3 space-y-2 pb-4">
         <label className="block">
