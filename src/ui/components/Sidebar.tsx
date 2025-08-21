@@ -100,6 +100,16 @@ export const Sidebar: React.FC = () => {
                         (state.coverPhotoId === p.id ? 'border-blue-600 ring-1 ring-blue-600' : 'border-gray-300 dark:border-gray-600')
                       }>
                         {p.previewUrl ? <img src={p.previewUrl} alt={p.name} className="object-cover w-full h-full" /> : <span className="text-[10px] p-1">{p.name}</span>}
+                        {coverPhotos.length > 0 && (
+                          <button
+                            type="button"
+                            title="Remove"
+                            onClick={(e) => { e.stopPropagation(); useCalendarStore.getState().actions.removeCoverPhoto(p.id); }}
+                            className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-600 text-white text-[10px] flex items-center justify-center shadow"
+                          >
+                            ×
+                          </button>
+                        )}
                       </button>
                     ))}
                     {(coverPhotos.length === 0 && photos.length === 0) && (
@@ -297,12 +307,21 @@ const EventList: React.FC = () => {
 const PhotoList: React.FC = () => {
   const photos = useCalendarStore(s => s.project.photos);
   const assign = useCalendarStore(s => s.actions.assignPhotoToActiveSlot);
+  const remove = useCalendarStore(s => s.actions.removePhoto);
   return (
     <div className="grid grid-cols-3 gap-2 max-h-40 overflow-auto">
       {photos.map(p => (
         <button key={p.id} onClick={() => assign(p.id)} className="relative group border border-gray-300 dark:border-gray-600 rounded overflow-hidden aspect-square bg-gray-100 dark:bg-gray-700">
           {p.previewUrl ? <img src={p.previewUrl} alt={p.name} className="object-cover w-full h-full" /> : <span className="text-[10px] p-1">{p.name}</span>}
           <span className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 text-white text-[10px] flex items-center justify-center transition">Assign</span>
+          <button
+            type="button"
+            title="Remove"
+            onClick={(e) => { e.stopPropagation(); remove(p.id); }}
+            className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-600 text-white text-[10px] flex items-center justify-center shadow"
+          >
+            ×
+          </button>
         </button>
       ))}
   {photos.length === 0 && <div className="col-span-3 text-[11px] text-gray-500 dark:text-gray-400">No photos yet.</div>}
