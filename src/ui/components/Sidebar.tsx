@@ -31,36 +31,36 @@ export const Sidebar: React.FC = () => {
   }));
 
   return (
-    <aside className="w-64 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col text-sm">
-      <div className="p-3 font-semibold uppercase tracking-wide text-xs text-gray-500">Project</div>
+  <aside className="w-64 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col text-sm text-gray-800 dark:text-gray-100">
+      <div className="p-3 font-semibold uppercase tracking-wide text-xs text-gray-600 dark:text-gray-300">Project</div>
       <div className="px-3 space-y-2 pb-4">
         <label className="block">
           <span className="text-xs font-medium">Page Size</span>
-          <select value={state.pageSize} onChange={e => state.setPageSize(e.target.value as CalendarPageSizeKey)} className="mt-1 w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded px-2 py-1">
+          <select value={state.pageSize} onChange={e => state.setPageSize(e.target.value as CalendarPageSizeKey)} className="mt-1 w-full bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded px-2 py-1">
             {Object.keys(SIZES).map(k => <option key={k} value={k}>{k}</option>)}
           </select>
         </label>
         <div className="grid grid-cols-2 gap-2">
           <label className="block">
             <span className="text-xs font-medium">Start Month</span>
-            <select value={state.startMonth} onChange={e => state.setStartMonth(Number(e.target.value))} className="mt-1 w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded px-2 py-1">
+            <select value={state.startMonth} onChange={e => state.setStartMonth(Number(e.target.value))} className="mt-1 w-full bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded px-2 py-1">
               {['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].map((m,i) => <option key={i} value={i}>{m}</option>)}
             </select>
           </label>
           <label className="block">
             <span className="text-xs font-medium">Start Year</span>
-            <input type="number" value={state.startYear} onChange={e => state.setStartYear(Number(e.target.value))} className="mt-1 w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded px-2 py-1" />
+            <input type="number" value={state.startYear} onChange={e => state.setStartYear(Number(e.target.value))} className="mt-1 w-full bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded px-2 py-1" />
           </label>
         </div>
   {/* Split controls removed; split direction is derived from page size automatically. */}
-  <label className="inline-flex items-center gap-2 text-xs">
+  <label className="inline-flex items-center gap-2 text-xs text-gray-800 dark:text-gray-100">
           <input type="checkbox" checked={state.showWeekNumbers} onChange={e => state.setShowWeekNumbers(e.target.checked)} />
           <span className="inline-flex items-center gap-1">
             Show ISO week numbers
             <InfoTooltip content="Adds an extra leftmost column with ISO week numbers (weeks start on Monday as per ISO 8601) to the monthly grid." />
           </span>
         </label>
-  <label className="inline-flex items-center gap-2 text-xs">
+  <label className="inline-flex items-center gap-2 text-xs text-gray-800 dark:text-gray-100">
           <input type="checkbox" checked={state.includeYearlyOverview} onChange={e => state.setIncludeYearlyOverview(e.target.checked)} />
           <span className="inline-flex items-center gap-1">
             Include yearly overview
@@ -76,29 +76,29 @@ export const Sidebar: React.FC = () => {
             </span>
           </label>
           {state.includeCoverPage && (
-            <label className="block">
+            <label className="block text-gray-800 dark:text-gray-100">
               <span className="text-xs font-medium inline-flex items-center gap-1">Cover Style <InfoTooltip content="Select the cover layout: a large single photo, or a 4×3 grid of month thumbnails." /></span>
-              <select value={state.coverStyle} onChange={e => state.setCoverStyle(e.target.value as any)} className="mt-1 w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded px-2 py-1">
+              <select value={state.coverStyle} onChange={e => state.setCoverStyle(e.target.value as any)} className="mt-1 w-full bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded px-2 py-1">
                 <option value="large-photo">Large Photo (90%)</option>
                 <option value="grid-4x3">4×3 Month Grid</option>
               </select>
             </label>
           )}
         </div>
-  <label className="inline-flex items-center gap-2 text-xs">
+  <label className="inline-flex items-center gap-2 text-xs text-gray-800 dark:text-gray-100">
           <input type="checkbox" checked={state.showCommonHolidays} onChange={e => state.setShowCommonHolidays(e.target.checked)} />
           <span className="inline-flex items-center gap-1">
             Show common holidays (overview)
             <InfoTooltip content="Highlights a few common fixed-date holidays in the yearly overview (demo: Jan 1, Jul 4, Dec 25)." />
           </span>
         </label>
-        <label className="block">
+        <label className="block text-gray-800 dark:text-gray-100">
           <span className="text-xs font-medium">Active Month</span>
-          <select value={state.monthIndex} onChange={e => state.setActiveMonth(Number(e.target.value))} className="mt-1 w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded px-2 py-1">
+          <select value={state.monthIndex} onChange={e => state.setActiveMonth(Number(e.target.value))} className="mt-1 w-full bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded px-2 py-1">
             {Array.from({length:12}).map((_,i) => <option key={i} value={i}>{i+1}</option>)}
           </select>
         </label>
-        <label className="block">
+        <label className="block text-gray-800 dark:text-gray-100">
           <span className="text-xs font-medium">Layout</span>
           {(() => {
             // Normalize any LR-specific ids to their TB counterparts so the value matches available options
@@ -111,7 +111,7 @@ export const Sidebar: React.FC = () => {
             };
             const value = normalize(state.layout as string);
             return (
-              <select value={value} onChange={e => state.setLayoutForMonth(state.monthIndex, e.target.value as LayoutId)} className="mt-1 w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded px-2 py-1">
+              <select value={value} onChange={e => state.setLayoutForMonth(state.monthIndex, e.target.value as LayoutId)} className="mt-1 w-full bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded px-2 py-1">
                 {LAYOUTS.filter(l => !l.id.endsWith('-lr') && l.id !== 'single-left').map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
               </select>
             );
@@ -119,14 +119,14 @@ export const Sidebar: React.FC = () => {
         </label>
   <button onClick={() => { if (confirm('Reset the project to defaults? This will clear photos and events.')) state.resetProject(); }} className="w-full text-xs bg-red-600 text-white rounded py-1 hover:bg-red-700">Reset Project</button>
       </div>
-      <div className="p-3 font-semibold uppercase tracking-wide text-xs text-gray-500">Photos</div>
+  <div className="p-3 font-semibold uppercase tracking-wide text-xs text-gray-600 dark:text-gray-300">Photos</div>
       <div className="px-3 pb-4 space-y-2">
         <PhotoUploader />
         <PhotoList />
       </div>
-      <div className="p-3 font-semibold uppercase tracking-wide text-xs text-gray-500">Events</div>
+  <div className="p-3 font-semibold uppercase tracking-wide text-xs text-gray-600 dark:text-gray-300">Events</div>
       <div className="px-3 pb-6 space-y-2">
-        <div className="text-[11px] text-gray-500">Tip: Double‑click a day in the preview to add an event.</div>
+  <div className="text-[11px] text-gray-500 dark:text-gray-400">Tip: Double‑click a day in the preview to add an event.</div>
         <EventList />
       </div>
     </aside>
@@ -168,10 +168,10 @@ const InfoTooltip: React.FC<{ content: string }> = ({ content }) => {
 const PhotoUploader: React.FC = () => {
   const addPhotos = useCalendarStore(s => s.actions.addPhotos);
   return (
-    <label className="block text-xs font-medium cursor-pointer">
+    <label className="block text-xs font-medium cursor-pointer text-gray-800 dark:text-gray-100">
       <span className="block mb-1">Add Photos</span>
       <input type="file" accept="image/*" multiple className="hidden" onChange={e => { if (e.target.files) addPhotos(e.target.files); e.target.value=''; }} />
-      <div className="border border-dashed border-gray-400 dark:border-gray-600 rounded p-2 text-center text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-900">Click to choose</div>
+      <div className="border border-dashed border-gray-400 dark:border-gray-600 rounded p-2 text-center text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-900">Click to choose</div>
     </label>
   );
 };
@@ -189,7 +189,7 @@ const EventList: React.FC = () => {
   });
   return (
     <div className="max-h-40 overflow-auto space-y-1">
-      {filtered.length === 0 && <div className="text-[11px] text-gray-500">No events for this month.</div>}
+  {filtered.length === 0 && <div className="text-[11px] text-gray-500 dark:text-gray-400">No events for this month.</div>}
       {filtered.map(ev => (
         <div key={ev.id} className="flex items-center gap-2 text-xs">
           <button title="Toggle visibility" onClick={() => toggle(ev.id)} className={"w-5 h-5 rounded-full border flex items-center justify-center " + (ev.visible ? 'bg-blue-600 text-white border-blue-600' : 'bg-transparent border-gray-400 text-gray-400')}>{ev.visible ? '✓' : ''}</button>
@@ -212,7 +212,7 @@ const PhotoList: React.FC = () => {
           <span className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 text-white text-[10px] flex items-center justify-center transition">Assign</span>
         </button>
       ))}
-      {photos.length === 0 && <div className="col-span-3 text-[11px] text-gray-500">No photos yet.</div>}
+  {photos.length === 0 && <div className="col-span-3 text-[11px] text-gray-500 dark:text-gray-400">No photos yet.</div>}
     </div>
   );
 };

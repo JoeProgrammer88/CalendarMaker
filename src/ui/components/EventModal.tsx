@@ -49,14 +49,14 @@ export const EventModal: React.FC = () => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40" onClick={close} />
-      <div className="relative bg-white dark:bg-gray-800 rounded shadow-xl w-[360px] max-w-[90vw] p-4 border border-gray-200 dark:border-gray-700">
+  <div className="relative bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded shadow-xl w-[360px] max-w-[90vw] p-4 border border-gray-200 dark:border-gray-700">
         <div className="text-sm font-semibold mb-2">{selectedId ? 'Edit Event' : 'Add Event'} – {dateISO}</div>
         {dayEvents.length > 1 && !selectedId && (
           <div className="mb-2 text-xs">
             <div className="mb-1">Multiple events on this day. Choose one to edit or create a new one:</div>
             <div className="space-y-1 max-h-24 overflow-auto">
               {dayEvents.map(ev => (
-                <button key={ev.id} type="button" onClick={() => { setSelectedId(ev.id); setText(ev.text); setColor(ev.color || ''); }} className="w-full text-left px-2 py-1 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-900">
+                <button key={ev.id} type="button" onClick={() => { setSelectedId(ev.id); setText(ev.text); setColor(ev.color || ''); }} className="w-full text-left px-2 py-1 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-100 rounded hover:bg-gray-50 dark:hover:bg-gray-900">
                   {ev.text}
                 </button>
               ))}
@@ -69,7 +69,7 @@ export const EventModal: React.FC = () => {
         <form onSubmit={onSubmit} className="space-y-3">
           <label className="block text-xs">
             <span className="block mb-1">Text</span>
-            <input autoFocus value={text} onChange={e => setText(e.target.value)} className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded px-2 py-1" placeholder="Event description" />
+            <input autoFocus value={text} onChange={e => setText(e.target.value)} className="w-full bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded px-2 py-1" placeholder="Event description" />
           </label>
           <label className="block text-xs">
             <span className="block mb-1">Color (optional)</span>

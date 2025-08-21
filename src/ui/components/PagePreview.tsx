@@ -144,15 +144,15 @@ export const PagePreview: React.FC = () => {
       // Shaded header background spanning the full header row and filling the 1/4" margin for 5x7
   <div key="header-bg" className="absolute bg-gray-100 dark:bg-gray-800/80" style={{ left: headerLeft, top: top - (pageSizeKey === '5x7' ? topMarginPx : 0), width: headerWidth, height: cellH + (pageSizeKey === '5x7' ? topMarginPx : 0) }} />,
       // Month label inside the grid header (bottom half of the page)
-  <div key="month-label" className="absolute text-center text-[14px] font-semibold" style={{ left: headerLeft, top: top + 2, width: headerWidth }}>
+  <div key="month-label" className="absolute text-center text-[14px] font-semibold text-gray-900 dark:text-gray-100" style={{ left: headerLeft, top: top + 2, width: headerWidth }}>
         {monthLabel}
       </div>,
    ...(showWeekNumbers ? [
-     <div key="wk" className="flex items-start justify-center text-[10px] font-medium bg-gray-50 dark:bg-gray-900"
+  <div key="wk" className="flex items-start justify-center text-[10px] font-medium text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-900"
        style={{ position:'absolute', left: headerLeft, top, width: cellW, height: cellH, paddingTop: 22 }}>Wk</div>
       ] : []),
       ...weekDayLabels.map((d,i) => (
-     <div key={d} className="flex items-start justify-center text-[10px] font-medium"
+  <div key={d} className="flex items-start justify-center text-[10px] font-medium text-gray-700 dark:text-gray-200"
        style={{ position:'absolute', left: headerLeft + (i + (showWeekNumbers?1:0))*cellW, top, width: cellW, height: cellH, paddingTop: 22 }}>{d}</div>
       ))
     ];
@@ -200,7 +200,7 @@ export const PagePreview: React.FC = () => {
               {items.slice(0,2).map((it,idx) => (
                 <div key={idx} className="truncate" title={it.text} style={{ color: it.color || undefined }}>{it.text}</div>
               ))}
-              {items.length > 2 && <div className="text-[9px] text-gray-500">+{items.length-2} more</div>}
+              {items.length > 2 && <div className="text-[9px] text-gray-500 dark:text-gray-400">+{items.length-2} more</div>}
             </div>
           );
         })
@@ -222,7 +222,7 @@ export const PagePreview: React.FC = () => {
           </div>
         )}
       </div>
-      <div className="text-xs text-gray-500">Preview (not final resolution)</div>
+  <div className="text-xs text-gray-500 dark:text-gray-400">Preview (not final resolution)</div>
     </div>
   );
 };

@@ -13,20 +13,20 @@ export const RightPanel: React.FC = () => {
   const clearAll = useCalendarStore(s => s.actions.clearAllData);
   return (
     <aside className="w-72 border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col text-sm p-3">
-      <div className="font-semibold uppercase tracking-wide text-xs text-gray-500 mb-2">Font</div>
-  <select value={fontFamily} onChange={e => setFontFamily(e.target.value)} className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 mb-2">
+      <div className="font-semibold uppercase tracking-wide text-xs text-gray-600 dark:text-gray-300 mb-2">Font</div>
+  <select value={fontFamily} onChange={e => setFontFamily(e.target.value)} className="w-full bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 mb-2">
         {FONT_OPTIONS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
       </select>
-  <div className="text-xs text-gray-500 mb-4">Preview:</div>
-  <div className="border rounded p-2 mb-4" style={{ fontFamily }}>The quick brown fox jumps over the lazy dog 123</div>
+  <div className="text-xs text-gray-500 dark:text-gray-400 mb-4">Preview:</div>
+  <div className="border border-gray-300 dark:border-gray-600 rounded p-2 mb-4 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100" style={{ fontFamily }}>The quick brown fox jumps over the lazy dog 123</div>
   <CaptionEditor />
   <AltTextEditor />
-      <div className="font-semibold uppercase tracking-wide text-xs text-gray-500 mb-2">Actions</div>
+  <div className="font-semibold uppercase tracking-wide text-xs text-gray-600 dark:text-gray-300 mb-2">Actions</div>
       <ExportButton />
       <div className="mt-2 grid grid-cols-2 gap-2">
-        <button onClick={undo} className="px-2 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">Undo</button>
-        <button onClick={redo} className="px-2 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">Redo</button>
-        <button onClick={exportPng} className="col-span-2 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">Export Current Page (PNG)</button>
+        <button onClick={undo} className="px-2 py-1 rounded border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700">Undo</button>
+        <button onClick={redo} className="px-2 py-1 rounded border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700">Redo</button>
+        <button onClick={exportPng} className="col-span-2 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700">Export Current Page (PNG)</button>
         <button onClick={() => { if (confirm('Clear all saved data? This removes photos and the project.')) clearAll(); }} className="col-span-2 px-2 py-1 rounded border border-red-600 text-red-600 hover:bg-red-50">Clear All Data</button>
       </div>
     </aside>
@@ -64,8 +64,8 @@ const AltTextEditor: React.FC = () => {
   if (!p) return null;
   return (
     <div className="mb-4">
-      <div className="font-semibold uppercase tracking-wide text-xs text-gray-500 mb-2">Alt Text</div>
-      <input defaultValue={p.alt || ''} onBlur={e => { p.alt = e.target.value; setAlt(); }} className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded px-2 py-1" placeholder="Describe the photo for accessibility" />
+  <div className="font-semibold uppercase tracking-wide text-xs text-gray-600 dark:text-gray-300 mb-2">Alt Text</div>
+  <input defaultValue={p.alt || ''} onBlur={e => { p.alt = e.target.value; setAlt(); }} className="w-full bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded px-2 py-1" placeholder="Describe the photo for accessibility" />
     </div>
   );
 };
@@ -77,8 +77,14 @@ const CaptionEditor: React.FC = () => {
   }));
   return (
     <div className="mb-4">
-      <div className="font-semibold uppercase tracking-wide text-xs text-gray-500 mb-2">Caption</div>
-      <textarea value={caption} onChange={e => setCaption(e.target.value)} rows={3} className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded px-2 py-1" placeholder="Add a caption for this month" />
+  <div className="font-semibold uppercase tracking-wide text-xs text-gray-600 dark:text-gray-300 mb-2">Caption</div>
+  <textarea
+        value={caption}
+        onChange={e => setCaption(e.target.value)}
+        rows={3}
+        className="w-full bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-300 border border-gray-300 dark:border-gray-600 rounded px-2 py-1"
+        placeholder="Add a caption for this month"
+      />
     </div>
   );
 };
