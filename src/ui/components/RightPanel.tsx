@@ -12,7 +12,7 @@ export const RightPanel: React.FC = () => {
   const exportPng = useCalendarStore(s => s.actions.exportCurrentMonthPng);
   const clearAll = useCalendarStore(s => s.actions.clearAllData);
   return (
-    <aside className="w-72 border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col text-sm p-3">
+    <aside className="w-72 border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col text-sm p-3 min-h-0 overflow-auto">
       <div className="font-semibold uppercase tracking-wide text-xs text-gray-600 dark:text-gray-300 mb-2">Font</div>
   <select value={fontFamily} onChange={e => setFontFamily(e.target.value)} className="w-full bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 mb-2">
         {FONT_OPTIONS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}

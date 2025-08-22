@@ -108,11 +108,11 @@ export const PagePreview: React.FC = () => {
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerCancel}
-          className={"absolute overflow-hidden group " + (active ? 'ring-2 ring-blue-500 cursor-grabbing' : 'border border-blue-400/60 cursor-grab')}
+          className={"absolute overflow-hidden group border border-gray-300 dark:border-gray-600 " + (active ? 'cursor-grabbing' : 'cursor-grab')}
           style={{ left, top, width: w, height: h, touchAction: 'none' }}
         >
           {img}
-          {!img && <div className="w-full h-full flex items-center justify-center text-[11px] text-blue-500/70">Click to assign</div>}
+          {!img && <div className="w-full h-full flex items-center justify-center text-[11px] text-gray-500 dark:text-gray-400">Click to assign</div>}
           {active && <TransformControls slotId={slot.slotId} />}
         </div>
       );

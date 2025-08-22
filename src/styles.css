@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-html, body, #root { height: 100%; }
+html, body, #root { min-height: 100%; }
 
 /* Scrollbar styling (optional) */
 ::-webkit-scrollbar { width: 10px; }

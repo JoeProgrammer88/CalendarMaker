@@ -21,9 +21,12 @@ export function defaultProject(): ProjectState {
   includeYearlyOverview: false,
   includeCoverPage: false,
   coverStyle: 'large-photo',
+  coverPhotoId: undefined as any,
+  coverTransform: { scale: 1, translateX: 0, translateY: 0, rotationDegrees: 0 },
       fontFamily: 'Inter'
     },
     photos: [],
+  coverPhotos: [],
   monthData: Array.from({length:12}, (_,i) => ({ index: i, slots: [ { slotId: 'main', photoId: undefined, transform: { scale:1, translateX:0, translateY:0, rotationDegrees:0 } } ], caption: '', events: [] })),
     events: []
   };

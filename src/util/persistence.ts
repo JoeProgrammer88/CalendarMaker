@@ -65,6 +65,12 @@ export async function clearProject(id: string): Promise<void> {
   await del(projectKey(id));
 }
 
+// Delete a single photo blob given its storage key
+export async function deletePhotoBlob(refKey?: string | null): Promise<void> {
+  if (!refKey) return;
+  try { await del(refKey); } catch {}
+}
+
 export function migrateToLatest(old: any): ProjectState {
   const migrated: ProjectState = {
     ...old,

@@ -5,7 +5,7 @@ import { defaultProject } from '../util/defaultProject';
 import type { ProjectState, CalendarPageSizeKey, LayoutId, MonthSlot, SplitDirection } from '../types';
 import { getLayoutById } from '../util/layouts';
 import { exportAsPdf, exportCurrentPageAsPng } from '../util/exporter';
-import { debounce, getLastProjectId, loadProjectById, savePhotoBlob, saveProject, clearProject } from '../util/persistence';
+import { debounce, getLastProjectId, loadProjectById, savePhotoBlob, saveProject, clearProject, deletePhotoBlob } from '../util/persistence';
 
 interface UIState {
   darkMode: boolean;
@@ -31,6 +31,9 @@ interface Actions {
   setIncludeYearlyOverview(v: boolean): void;
   setIncludeCoverPage(v: boolean): void;
   setCoverStyle(style: 'large-photo' | 'grid-4x3'): void;
+  setCoverPhoto(photoId: string | null): void;
+  updateCoverTransform(delta: Partial<{ scale: number; translateX: number; translateY: number; rotationDegrees: number }>): void;
+  resetCoverTransform(): void;
   resetProject(): void;
   setLayoutForMonth(monthIndex: number, layoutId: LayoutId): void;
   setActiveMonth(idx: number): void;
@@ -42,6 +45,9 @@ interface Actions {
   exportProject(): Promise<void>;
   exportCurrentMonthPng(): Promise<void>;
   addPhotos(files: FileList | File[]): Promise<void>;
+  addCoverPhotos(files: FileList | File[]): Promise<void>;
+  removePhoto(photoId: string): Promise<void>;
+  removeCoverPhoto(photoId: string): Promise<void>;
   assignPhotoToActiveSlot(photoId: string, slotId?: string): void;
   updateActiveSlotTransform(delta: Partial<{ scale: number; translateX: number; translateY: number; rotationDegrees: number }>): void;
   resetActiveSlotTransform(): void;
@@ -116,6 +122,21 @@ export const useCalendarStore = create<StoreShape>()(immer((set, get) => ({
   setIncludeYearlyOverview(v) { set(s => { s.project.calendar.includeYearlyOverview = v; }); },
   setIncludeCoverPage(v) { set(s => { s.project.calendar.includeCoverPage = v; }); },
   setCoverStyle(style) { set(s => { s.project.calendar.coverStyle = style; }); },
+  setCoverPhoto(photoId) { set(s => { s.project.calendar.coverPhotoId = photoId || undefined; }); get().actions.saveNow(); },
+  updateCoverTransform(delta) { set(s => {
+      const t = s.project.calendar.coverTransform || { scale:1, translateX:0, translateY:0, rotationDegrees:0 };
+      if (delta.scale !== undefined) t.scale = Math.min(5, Math.max(0.1, delta.scale));
+      if (delta.translateX !== undefined) t.translateX = delta.translateX;
+      if (delta.translateY !== undefined) t.translateY = delta.translateY;
+      if (delta.rotationDegrees !== undefined) t.rotationDegrees = ((delta.rotationDegrees % 360) + 360) % 360;
+      s.project.calendar.coverTransform = t;
+    });
+    if (!(window as any).__cm_save_debounced__) {
+      (window as any).__cm_save_debounced__ = debounce(() => get().actions.saveNow(), 800);
+    }
+    (window as any).__cm_save_debounced__();
+  },
+  resetCoverTransform() { set(s => { s.project.calendar.coverTransform = { scale:1, translateX:0, translateY:0, rotationDegrees:0 }; }); },
   resetProject() { set(s => { s.project = defaultProject(); s.ui.activeMonth = 0; s.ui.activeSlotId = 'main'; s.ui.history = []; s.ui.future = []; }); get().actions.saveNow(); },
     // Ensure month slots match layout definition (preserve existing where possible)
     setLayoutForMonth(monthIndex, layoutId) { set(s => {
@@ -180,6 +201,41 @@ export const useCalendarStore = create<StoreShape>()(immer((set, get) => ({
         return { id, originalBlobRef, previewBlobRef: '', name: f.name, assignedMonths: [], previewUrl };
       }));
       set(s => { s.project.photos.push(...newPhotos); });
+      get().actions.saveNow();
+    },
+    async removePhoto(photoId) {
+      const p = get().project.photos.find(p => p.id === photoId);
+      // Clear any references from month slots
+      set(s => {
+        for (const page of s.project.monthData) {
+          for (const slot of page.slots) {
+            if (slot.photoId === photoId) slot.photoId = undefined;
+          }
+        }
+        s.project.photos = s.project.photos.filter(pp => pp.id !== photoId);
+      });
+      // Delete blob after state update
+      await deletePhotoBlob(p?.originalBlobRef);
+      get().actions.saveNow();
+    },
+    async addCoverPhotos(files) {
+      const arr = Array.from(files);
+      const newPhotos = await Promise.all(arr.map(async f => {
+        const id = crypto.randomUUID();
+        const originalBlobRef = await savePhotoBlob(id, f);
+        const previewUrl = URL.createObjectURL(f);
+        return { id, originalBlobRef, previewBlobRef: '', name: f.name, assignedMonths: [], previewUrl };
+      }));
+      set(s => { if (!s.project.coverPhotos) s.project.coverPhotos = []; s.project.coverPhotos.push(...newPhotos); });
+      get().actions.saveNow();
+    },
+    async removeCoverPhoto(photoId) {
+      const p = get().project.coverPhotos?.find(p => p.id === photoId);
+      set(s => {
+        if (s.project.calendar.coverPhotoId === photoId) s.project.calendar.coverPhotoId = undefined;
+        if (s.project.coverPhotos) s.project.coverPhotos = s.project.coverPhotos.filter(pp => pp.id !== photoId);
+      });
+      await deletePhotoBlob(p?.originalBlobRef);
       get().actions.saveNow();
     },
     assignPhotoToActiveSlot(photoId, slotId) { set(s => { const m = s.ui.activeMonth; const monthPage = s.project.monthData[m]; const targetSlotId = slotId || s.ui.activeSlotId || monthPage.slots[0]?.slotId; const slot = monthPage.slots.find((sl: MonthSlot) => sl.slotId === targetSlotId); if (slot) slot.photoId = photoId; }); get().actions.saveNow(); },
