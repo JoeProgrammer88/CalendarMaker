@@ -24,7 +24,6 @@ interface Actions {
   setSplitDirection(dir: SplitDirection): void;
   setStartMonth(m: number): void;
   setStartYear(y: number): void;
-  setShowWeekNumbers(v: boolean): void;
   setShowCommonHolidays(v: boolean): void;
   setIncludeYearlyOverview(v: boolean): void;
   setIncludeCoverPage(v: boolean): void;
@@ -104,7 +103,6 @@ export const useCalendarStore = create<StoreShape>()(immer((set, get) => ({
   setSplitDirection(dir) { set(s => { s.project.calendar.splitDirection = dir; }); },
   setStartMonth(m) { set(s => { s.project.calendar.startMonth = Math.max(0, Math.min(11, m)); }); },
   setStartYear(y) { set(s => { s.project.calendar.startYear = y; }); },
-  setShowWeekNumbers(v) { set(s => { s.project.calendar.showWeekNumbers = v; }); },
   setShowCommonHolidays(v) { set(s => { s.project.calendar.showCommonHolidays = v; }); },
   setIncludeYearlyOverview(v) { set(s => { s.project.calendar.includeYearlyOverview = v; }); },
   setIncludeCoverPage(v) { set(s => { s.project.calendar.includeCoverPage = v; }); },

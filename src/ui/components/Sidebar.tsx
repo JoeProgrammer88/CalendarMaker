@@ -10,7 +10,6 @@ export const Sidebar: React.FC = () => {
   splitDirection: s.project.calendar.splitDirection,
   startMonth: s.project.calendar.startMonth,
   startYear: s.project.calendar.startYear,
-  showWeekNumbers: s.project.calendar.showWeekNumbers,
   includeYearlyOverview: s.project.calendar.includeYearlyOverview ?? false,
   includeCoverPage: s.project.calendar.includeCoverPage ?? false,
   coverStyle: s.project.calendar.coverStyle ?? 'large-photo',
@@ -23,7 +22,6 @@ export const Sidebar: React.FC = () => {
   // setSplitDirection removed from UI; split handled automatically by page size
   setStartMonth: s.actions.setStartMonth,
   setStartYear: s.actions.setStartYear,
-  setShowWeekNumbers: s.actions.setShowWeekNumbers,
   setShowCommonHolidays: s.actions.setShowCommonHolidays,
   setIncludeYearlyOverview: s.actions.setIncludeYearlyOverview,
   setIncludeCoverPage: s.actions.setIncludeCoverPage,
@@ -61,13 +59,6 @@ export const Sidebar: React.FC = () => {
           </label>
         </div>
   {/* Split controls removed; split direction is derived from page size automatically. */}
-  <label className="inline-flex items-center gap-2 text-xs text-gray-800 dark:text-gray-100">
-          <input type="checkbox" checked={state.showWeekNumbers} onChange={e => state.setShowWeekNumbers(e.target.checked)} />
-          <span className="inline-flex items-center gap-1">
-            Show ISO week numbers
-            <InfoTooltip content="Adds an extra leftmost column with ISO week numbers (weeks start on Monday as per ISO 8601) to the monthly grid." />
-          </span>
-        </label>
   <label className="inline-flex items-center gap-2 text-xs text-gray-800 dark:text-gray-100">
           <input type="checkbox" checked={state.includeYearlyOverview} onChange={e => state.setIncludeYearlyOverview(e.target.checked)} />
           <span className="inline-flex items-center gap-1">

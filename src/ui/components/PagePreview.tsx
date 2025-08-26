@@ -3,10 +3,10 @@ import { useCalendarStore } from '../../store/store';
 import { getLayoutById } from '../../util/layouts';
 import { getEffectiveLayout } from '../../util/constants';
 import { computePagePixelSize } from '../../util/pageSize';
-import { generateMonthGrid, isoWeekNumber } from '../../util/calendar';
+import { generateMonthGrid } from '../../util/calendar';
 
 export const PagePreview: React.FC = () => {
-  const { monthIndex, layoutId, pageSizeKey, orientation, splitDirection, photos, monthPage, activeSlotId, setActiveSlot, updateTransform, startMonth, startYear, showWeekNumbers, fontFamily, allEvents, openEventDialog } = useCalendarStore(s => ({
+  const { monthIndex, layoutId, pageSizeKey, orientation, splitDirection, photos, monthPage, activeSlotId, setActiveSlot, updateTransform, startMonth, startYear, fontFamily, allEvents, openEventDialog } = useCalendarStore(s => ({
     monthIndex: s.ui.activeMonth,
     layoutId: s.project.calendar.layoutStylePerMonth[s.ui.activeMonth],
     pageSizeKey: s.project.calendar.pageSize,
@@ -19,7 +19,6 @@ export const PagePreview: React.FC = () => {
     updateTransform: s.actions.updateActiveSlotTransform,
     startMonth: s.project.calendar.startMonth,
     startYear: s.project.calendar.startYear,
-    showWeekNumbers: s.project.calendar.showWeekNumbers,
     fontFamily: s.project.calendar.fontFamily,
   allEvents: s.project.events,
   openEventDialog: s.actions.openEventDialog
@@ -129,7 +128,7 @@ export const PagePreview: React.FC = () => {
   const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   const monthLabel = `${monthNames[realMonth]} ${realYear}`;
     const weekDayLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  const columns = 7 + (showWeekNumbers ? 1 : 0);
+  const columns = 7;
   const cellW = (layout.grid.w * size.width) / columns;
   // Apply 1/4" top margin for 5x7 on the text (grid) side only
   const topMarginPx = pageSizeKey === '5x7' ? (0.25 * previewDpi) : 0;
@@ -147,13 +146,10 @@ export const PagePreview: React.FC = () => {
   <div key="month-label" className="absolute text-center text-[14px] font-semibold text-gray-900 dark:text-gray-100" style={{ left: headerLeft, top: top + 2, width: headerWidth }}>
         {monthLabel}
       </div>,
-   ...(showWeekNumbers ? [
-  <div key="wk" className="flex items-start justify-center text-[10px] font-medium text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-900"
-       style={{ position:'absolute', left: headerLeft, top, width: cellW, height: cellH, paddingTop: 22 }}>Wk</div>
-      ] : []),
+  ,
       ...weekDayLabels.map((d,i) => (
   <div key={d} className="flex items-start justify-center text-[10px] font-medium text-gray-700 dark:text-gray-200"
-       style={{ position:'absolute', left: headerLeft + (i + (showWeekNumbers?1:0))*cellW, top, width: cellW, height: cellH, paddingTop: 22 }}>{d}</div>
+       style={{ position:'absolute', left: headerLeft + i*cellW, top, width: cellW, height: cellH, paddingTop: 22 }}>{d}</div>
       ))
     ];
 
@@ -170,15 +166,9 @@ export const PagePreview: React.FC = () => {
     });
 
     const weeks = grid.weeks.map((week,wIdx) => {
-      const weekStart = week.find(c => c.inMonth && c.date)?.date || undefined;
-      const iso = weekStart ? isoWeekNumber(weekStart) : undefined;
       return [
-        ...(showWeekNumbers ? [
-          <div key={`wk-${wIdx}`} className={"absolute border border-gray-200 dark:border-gray-700 text-[10px] flex items-center justify-center bg-gray-50 dark:bg-gray-900"}
-               style={{ left, top: top + (wIdx+1)*cellH, width: cellW, height: cellH }}>{iso ?? ''}</div>
-        ] : []),
-        ...week.map((cell,dIdx) => {
-          const x = left + (dIdx + (showWeekNumbers?1:0)) * cellW;
+      ...week.map((cell,dIdx) => {
+        const x = left + dIdx * cellW;
           const y = top + (wIdx+1) * cellH;
           const items = cell.day ? (monthEvents[cell.day] || []) : [];
           const onDoubleClick: React.MouseEventHandler<HTMLDivElement> | undefined = (cell.inMonth && cell.day) ? () => {
@@ -208,7 +198,7 @@ export const PagePreview: React.FC = () => {
     });
 
   return { gridNode: <>{header}{weeks}</> };
-  }, [layout, size, monthIndex, startMonth, startYear, showWeekNumbers, allEvents, openEventDialog]);
+  }, [layout, size, monthIndex, startMonth, startYear, allEvents, openEventDialog]);
 
   return (
     <div className="flex flex-col items-center gap-2">

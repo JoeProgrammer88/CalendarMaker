@@ -16,7 +16,6 @@ export function defaultProject(): ProjectState {
   pageSize: 'Letter',
   orientation: 'portrait',
   splitDirection: 'tb',
-      showWeekNumbers: false,
       showCommonHolidays: false,
   includeYearlyOverview: false,
   includeCoverPage: false,

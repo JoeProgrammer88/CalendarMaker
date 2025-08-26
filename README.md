@@ -15,7 +15,7 @@ A fully client-side React + TypeScript web application for designing printable p
 - Multi-layout system (single, dual, triple, quad, full-bleed) with LR variants; dual/triple TB use exact 50% photo/50% grid.
 - Photo upload library, thumbnails, per-slot assignment.
 - Non-destructive transforms per slot (zoom, pan, rotate, reset).
-- Calendar grid with month label inside the header, optional ISO week numbers.
+- Calendar grid with month label inside the header.
 - Events: add/edit/delete via modal (double‑click a day), visibility toggle; render in grid.
 - (Per-month caption removed.)
 - Yearly Overview page (optional) with mini-month grids; basic US holiday highlights.
@@ -109,7 +109,7 @@ Notes:
 ## ♻️ Development Workflow
 1. Select a page size, orientation, and layout (use Split toggle for TB/LR).
 2. Upload photos and assign to slots; adjust transforms.
-3. Add events; toggle week numbers or Overview holidays if desired.
+3. Add events; toggle Overview holidays if desired.
 4. Optional: Include a Cover page and choose the style.
 5. Export multi-page PDF for printing.
 
