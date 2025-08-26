@@ -4,9 +4,10 @@ import { getLayoutById } from '../../util/layouts';
 import { getEffectiveLayout } from '../../util/constants';
 import { computePagePixelSize } from '../../util/pageSize';
 import { generateMonthGrid } from '../../util/calendar';
+import { collectHolidayMap } from '../../util/holidays';
 
 export const PagePreview: React.FC = () => {
-  const { monthIndex, layoutId, pageSizeKey, orientation, splitDirection, photos, monthPage, activeSlotId, setActiveSlot, updateTransform, startMonth, startYear, fontFamily, allEvents, openEventDialog } = useCalendarStore(s => ({
+  const { monthIndex, layoutId, pageSizeKey, orientation, splitDirection, photos, monthPage, activeSlotId, setActiveSlot, updateTransform, startMonth, startYear, months, fontFamily, allEvents, openEventDialog, showCommonHolidays } = useCalendarStore(s => ({
     monthIndex: s.ui.activeMonth,
     layoutId: s.project.calendar.layoutStylePerMonth[s.ui.activeMonth],
     pageSizeKey: s.project.calendar.pageSize,
@@ -19,9 +20,11 @@ export const PagePreview: React.FC = () => {
     updateTransform: s.actions.updateActiveSlotTransform,
     startMonth: s.project.calendar.startMonth,
     startYear: s.project.calendar.startYear,
+    months: s.project.calendar.months,
     fontFamily: s.project.calendar.fontFamily,
   allEvents: s.project.events,
-  openEventDialog: s.actions.openEventDialog
+  openEventDialog: s.actions.openEventDialog,
+  showCommonHolidays: s.project.calendar.showCommonHolidays ?? false
   }));
   const layout = getEffectiveLayout(layoutId, splitDirection);
   const previewDpi = 100;
@@ -125,6 +128,9 @@ export const PagePreview: React.FC = () => {
     const realMonth = totalOffset % 12;
     const realYear = startYear + Math.floor(totalOffset / 12);
   const grid = generateMonthGrid(realYear, realMonth);
+  const spanMap = showCommonHolidays ? collectHolidayMap(startMonth, startYear, months) : {};
+  const holidays: Record<string,string> = {};
+  Object.keys(spanMap).forEach(iso => { if (iso.startsWith(`${realYear}-${String(realMonth+1).padStart(2,'0')}-`)) holidays[iso] = spanMap[iso]; });
   const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   const monthLabel = `${monthNames[realMonth]} ${realYear}`;
     const weekDayLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -184,12 +190,27 @@ export const PagePreview: React.FC = () => {
               openEventDialog(dateISO, null);
             }
           } : undefined;
+          const dateISO = cell.day ? `${realYear}-${String(realMonth+1).padStart(2,'0')}-${String(cell.day).padStart(2,'0')}` : '';
+          const isHoliday = !!holidays[dateISO];
           return (
-            <div onDoubleClick={onDoubleClick} key={wIdx+'-'+dIdx} className={"absolute border border-gray-200 dark:border-gray-700 text-[10px] p-0.5 space-y-0.5 " + (cell.inMonth ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900' : 'opacity-30')} style={{ left:x, top:y, width:cellW, height:cellH }}>
+            <div onDoubleClick={onDoubleClick} key={wIdx+'-'+dIdx} className={"absolute border border-gray-200 dark:border-gray-700 text-[10px] p-0.5 space-y-0.5 " + (cell.inMonth ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900' : 'opacity-30')} style={{ left:x, top:y, width:cellW, height:cellH, background: isHoliday ? 'rgba(255,235,200,0.9)' : undefined }} title={isHoliday ? holidays[dateISO] : undefined}>
               {cell.day && <div className="font-medium select-none">{cell.day}</div>}
-              {items.slice(0,2).map((it,idx) => (
-                <div key={idx} className="truncate" title={it.text} style={{ color: it.color || undefined }}>{it.text}</div>
-              ))}
+              {(() => {
+                // Show up to 2 events; each event text can wrap within its container.
+                const maxEvents = 2;
+                return items.slice(0, maxEvents).map((it, idx) => (
+                  <div
+                    key={idx}
+                    className="text-[9px] leading-tight"
+                    title={it.text}
+                    style={{
+                      color: it.color || undefined,
+                      wordBreak: 'break-word',
+                      overflow: 'hidden'
+                    }}
+                  >{it.text}</div>
+                ));
+              })()}
               {items.length > 2 && <div className="text-[9px] text-gray-500 dark:text-gray-400">+{items.length-2} more</div>}
             </div>
           );
@@ -198,7 +219,7 @@ export const PagePreview: React.FC = () => {
     });
 
   return { gridNode: <>{header}{weeks}</> };
-  }, [layout, size, monthIndex, startMonth, startYear, allEvents, openEventDialog]);
+  }, [layout, size, monthIndex, startMonth, startYear, months, allEvents, openEventDialog, showCommonHolidays]);
 
   return (
     <div className="flex flex-col items-center gap-2">

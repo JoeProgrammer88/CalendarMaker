@@ -10,12 +10,11 @@ export const Sidebar: React.FC = () => {
   splitDirection: s.project.calendar.splitDirection,
   startMonth: s.project.calendar.startMonth,
   startYear: s.project.calendar.startYear,
-  includeYearlyOverview: s.project.calendar.includeYearlyOverview ?? false,
   includeCoverPage: s.project.calendar.includeCoverPage ?? false,
+  showCommonHolidays: s.project.calendar.showCommonHolidays ?? false,
   coverStyle: s.project.calendar.coverStyle ?? 'large-photo',
   coverPhotoId: s.project.calendar.coverPhotoId,
   coverTransform: s.project.calendar.coverTransform,
-  showCommonHolidays: s.project.calendar.showCommonHolidays,
     monthIndex: s.ui.activeMonth,
     layout: s.project.calendar.layoutStylePerMonth[s.ui.activeMonth],
     setPageSize: s.actions.setPageSize,
@@ -23,7 +22,6 @@ export const Sidebar: React.FC = () => {
   setStartMonth: s.actions.setStartMonth,
   setStartYear: s.actions.setStartYear,
   setShowCommonHolidays: s.actions.setShowCommonHolidays,
-  setIncludeYearlyOverview: s.actions.setIncludeYearlyOverview,
   setIncludeCoverPage: s.actions.setIncludeCoverPage,
   setCoverStyle: s.actions.setCoverStyle,
   setCoverPhoto: s.actions.setCoverPhoto,
@@ -35,7 +33,6 @@ export const Sidebar: React.FC = () => {
   }));
   const coverPhotos = useCalendarStore(s => s.project.coverPhotos ?? []);
   const photos = useCalendarStore(s => s.project.photos);
-
   return (
   <aside className="w-64 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col text-sm text-gray-800 dark:text-gray-100 min-h-0 overflow-auto">
       <div className="p-3 font-semibold uppercase tracking-wide text-xs text-gray-600 dark:text-gray-300">Project</div>
@@ -59,13 +56,14 @@ export const Sidebar: React.FC = () => {
           </label>
         </div>
   {/* Split controls removed; split direction is derived from page size automatically. */}
-  <label className="inline-flex items-center gap-2 text-xs text-gray-800 dark:text-gray-100">
-          <input type="checkbox" checked={state.includeYearlyOverview} onChange={e => state.setIncludeYearlyOverview(e.target.checked)} />
+        <label className="inline-flex items-center gap-2 text-xs text-gray-800 dark:text-gray-100">
+          <input type="checkbox" checked={state.showCommonHolidays} onChange={e => state.setShowCommonHolidays(e.target.checked)} />
           <span className="inline-flex items-center gap-1">
-            Include yearly overview
-            <InfoTooltip content="Adds a single-page overview with mini calendars for all months." />
+            Highlight common holidays
+            <InfoTooltip content="Highlights a few common fixed-date holidays (Jan 1, Jul 4, Dec 25) in the monthly grid." />
           </span>
         </label>
+  
         <div className="space-y-1">
           <label className="inline-flex items-center gap-2 text-xs">
             <input type="checkbox" checked={state.includeCoverPage} onChange={e => state.setIncludeCoverPage(e.target.checked)} />
@@ -126,13 +124,7 @@ export const Sidebar: React.FC = () => {
             </label>
           )}
         </div>
-  <label className="inline-flex items-center gap-2 text-xs text-gray-800 dark:text-gray-100">
-          <input type="checkbox" checked={state.showCommonHolidays} onChange={e => state.setShowCommonHolidays(e.target.checked)} />
-          <span className="inline-flex items-center gap-1">
-            Show common holidays (overview)
-            <InfoTooltip content="Highlights a few common fixed-date holidays in the yearly overview (demo: Jan 1, Jul 4, Dec 25)." />
-          </span>
-        </label>
+  
         <label className="block text-gray-800 dark:text-gray-100">
           <span className="text-xs font-medium">Active Month</span>
           <select value={state.monthIndex} onChange={e => state.setActiveMonth(Number(e.target.value))} className="mt-1 w-full bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded px-2 py-1">

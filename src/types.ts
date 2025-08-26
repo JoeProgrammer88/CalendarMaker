@@ -29,10 +29,10 @@ export interface MonthSlot { slotId: string; photoId?: string; transform: PhotoT
 export interface MonthPage { index: number; slots: MonthSlot[]; events: string[]; }
 
 export interface PhotoMeta { id: string; originalBlobRef?: string; previewBlobRef?: string; name: string; assignedMonths: number[]; previewUrl?: string; }
-export interface EventItem { id: string; dateISO: string; text: string; color?: string; visible: boolean; }
+export interface EventItem { id: string; dateISO: string; text: string; color?: string; visible: boolean; systemTag?: 'holiday'; }
 
 export type SplitDirection = 'tb' | 'lr'; // tb: top/bottom, lr: left/right
 export type CoverStyle = 'large-photo' | 'grid-4x3';
-export interface CalendarSettings { startMonth: number; startYear: number; months: number; layoutStylePerMonth: LayoutId[]; pageSize: CalendarPageSizeKey; orientation: Orientation; splitDirection: SplitDirection; showCommonHolidays: boolean; includeYearlyOverview?: boolean; includeCoverPage?: boolean; coverStyle?: CoverStyle; coverPhotoId?: string; coverTransform?: PhotoTransform; fontFamily: string; }
+export interface CalendarSettings { startMonth: number; startYear: number; months: number; layoutStylePerMonth: LayoutId[]; pageSize: CalendarPageSizeKey; orientation: Orientation; splitDirection: SplitDirection; showCommonHolidays?: boolean; includeCoverPage?: boolean; coverStyle?: CoverStyle; coverPhotoId?: string; coverTransform?: PhotoTransform; fontFamily: string; }
 
 export interface ProjectState { id: string; meta: { createdAt: string; updatedAt: string; appVersion: string; schemaVersion: number; }; calendar: CalendarSettings; photos: PhotoMeta[]; coverPhotos?: PhotoMeta[]; monthData: MonthPage[]; events: EventItem[]; }

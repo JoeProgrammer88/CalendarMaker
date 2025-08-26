@@ -5,7 +5,8 @@ import type { ProjectState } from '../types';
 import { computePagePixelSize } from './pageSize';
 import { getLayoutById } from './layouts';
 import { getEffectiveLayout } from './constants';
-import { generateMonthGrid, isoWeekNumber } from './calendar';
+import { generateMonthGrid } from './calendar';
+import { collectHolidayMap } from './holidays';
 
 function pickStandardFontName(fontFamily: string) {
   switch (fontFamily) {
@@ -87,15 +88,7 @@ function getMonthLabel(year: number, month0: number) {
   return `${monthNames[month0]} ${year}`;
 }
 
-function getCommonHolidays(year: number): Record<string, string> {
-  // Very small subset: New Year's Day, Independence Day (US), Christmas; fixed dates only for demo.
-  const map: Record<string, string> = {};
-  const add = (m: number, d: number, name: string) => { map[`${year}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`] = name; };
-  add(1, 1, "New Year's Day");
-  add(7, 4, 'Independence Day');
-  add(12, 25, 'Christmas Day');
-  return map;
-}
+ 
 
 export async function exportAsPdf(project: ProjectState, onProgress?: (p: number) => void) {
   const pdf = await PDFDocument.create();
@@ -105,7 +98,7 @@ export async function exportAsPdf(project: ProjectState, onProgress?: (p: number
   try { (pdf as any).registerFontkit?.(fontkit); } catch {}
   const font = await embedSelectedFont(pdf, project.calendar.fontFamily);
   const hasCover = !!project.calendar.includeCoverPage;
-  const totalPages = project.calendar.months + (project.calendar.includeYearlyOverview ? 1 : 0) + (hasCover ? 1 : 0);
+  const totalPages = project.calendar.months + (hasCover ? 1 : 0);
   let pageCounter = 0;
 
   // Optional Cover Page
@@ -225,78 +218,7 @@ export async function exportAsPdf(project: ProjectState, onProgress?: (p: number
     if (onProgress) onProgress(pageCounter / totalPages);
   }
 
-  // Optional Yearly Overview
-  if (project.calendar.includeYearlyOverview) {
-    const { pageSize, orientation } = project.calendar;
-    const pt = computePagePixelSize(pageSize, orientation, 72);
-    const page = pdf.addPage([pt.width, pt.height]);
-    const { width, height } = page.getSize();
-    const startMonth = project.calendar.startMonth;
-    const startYear = project.calendar.startYear;
-    page.drawText(`${startYear} Overview`, { x: 40, y: height - 50, size: 24, font, color: rgb(0,0,0) });
-    const cols = 3, rows = 4;
-    const margin = 36;
-    const gapX = 14, gapY = 14;
-    const gridW = width - margin*2 - gapX*(cols-1);
-    const gridH = height - margin*2 - 60 - gapY*(rows-1);
-    const cellW = gridW / cols;
-    const cellH = gridH / rows;
-    const holidays = project.calendar.showCommonHolidays ? getCommonHolidays(startYear) : {};
-
-    for (let i = 0; i < 12; i++) {
-      const r = Math.floor(i / cols);
-      const c = i % cols;
-      const x = margin + c * (cellW + gapX);
-      const y = height - margin - (r + 1) * cellH - r * gapY;
-      const m0 = (startMonth + i) % 12;
-      const yOffset = Math.floor((startMonth + i) / 12);
-      const yReal = startYear + yOffset;
-      // month label
-      page.drawText(getMonthLabel(yReal, m0), { x: x + 6, y: y + cellH - 16, size: 12, font, color: rgb(0,0,0) });
-      // mini grid
-      const headerH = 12;
-      const weeks = generateMonthGrid(yReal, m0).weeks;
-      const cols2 = 7;
-      const cellW2 = (cellW - 12) / cols2;
-      const cellH2 = (cellH - 24) / 7; // header + 6
-      const gx = x + 6;
-      const gy = y + 6;
-      // header labels
-      ['S','M','T','W','T','F','S'].forEach((d, idx) => {
-        page.drawText(d, { x: gx + idx * cellW2 + 2, y: gy + 6 + 6 * cellH2 + 2, size: 8, font, color: rgb(0,0,0) });
-      });
-      // grid lines
-      for (let rr = 0; rr <= 7; rr++) {
-        const yy = gy + rr * cellH2 + headerH;
-        page.drawLine({ start: { x: gx, y: yy }, end: { x: gx + cols2 * cellW2, y: yy }, thickness: 0.25, color: rgb(0.8,0.8,0.8) });
-      }
-      for (let cc = 0; cc <= cols2; cc++) {
-        const xx = gx + cc * cellW2;
-        page.drawLine({ start: { x: xx, y: gy + headerH }, end: { x: xx, y: gy + headerH + 6 * cellH2 }, thickness: 0.25, color: rgb(0.8,0.8,0.8) });
-      }
-      // days
-      for (let w = 0; w < weeks.length; w++) {
-        for (let d = 0; d < 7; d++) {
-          const cell = weeks[w][d];
-          const cx = gx + d * cellW2 + 2;
-          const cy = gy + headerH + (5 - w) * cellH2 + cellH2 - 12; // invert for PDF coords
-          if (cell.inMonth && cell.day) {
-            const dateISO = `${yReal}-${String(m0+1).padStart(2,'0')}-${String(cell.day).padStart(2,'0')}`;
-            const isHoliday = holidays[dateISO];
-            if (isHoliday) {
-              // subtle highlight
-              page.drawRectangle({ x: gx + d*cellW2 + 0.5, y: gy + headerH + (5 - w)*cellH2 + 0.5, width: cellW2 - 1, height: cellH2 - 1, color: rgb(1,0.95,0.8) });
-            }
-            page.drawText(String(cell.day), { x: cx, y: cy, size: 8, font, color: rgb(0,0,0) });
-          }
-        }
-      }
-      // border
-      page.drawRectangle({ x, y, width: cellW, height: cellH, borderColor: rgb(0.6,0.6,0.6), borderWidth: 0.5 });
-    }
-    pageCounter++;
-    if (onProgress) onProgress(pageCounter / totalPages);
-  }
+  
   for (let m = 0; m < project.calendar.months; m++) {
   const layoutId = project.calendar.layoutStylePerMonth[m];
   const { pageSize, orientation, splitDirection } = project.calendar;
@@ -410,7 +332,10 @@ export async function exportAsPdf(project: ProjectState, onProgress?: (p: number
 
     // Days and events (truncate to 2 lines)
     const grid = generateMonthGrid(realYear, realMonth);
-    const events = project.events.filter(e => e.visible && e.dateISO.startsWith(`${realYear}-${String(realMonth+1).padStart(2,'0')}`));
+  const events = project.events.filter(e => e.visible && e.dateISO.startsWith(`${realYear}-${String(realMonth+1).padStart(2,'0')}`));
+  const spanMap = project.calendar.showCommonHolidays ? collectHolidayMap(project.calendar.startMonth, project.calendar.startYear, project.calendar.months) : {};
+  const holidays: Record<string,string> = {};
+  Object.keys(spanMap).forEach(iso => { if (iso.startsWith(`${realYear}-${String(realMonth+1).padStart(2,'0')}-`)) holidays[iso] = spanMap[iso]; });
     for (let w = 0; w < grid.weeks.length; w++) {
       const week = grid.weeks[w];
       // Week number column (shade background like preview and draw the ISO week)
@@ -422,11 +347,57 @@ export async function exportAsPdf(project: ProjectState, onProgress?: (p: number
         if (cell.inMonth && cell.day) {
           page.drawText(String(cell.day), { x: cx + 4, y: cy + cellH - 14, size: 10, font, color: rgb(0,0,0) });
           const dateISO = `${realYear}-${String(realMonth+1).padStart(2,'0')}-${String(cell.day).padStart(2,'0')}`;
+          if (holidays[dateISO]) {
+            // draw highlight rectangle behind day number (draw first then re-draw day text for contrast)
+            page.drawRectangle({ x: cx + 1, y: cy + 1, width: cellW - 2, height: cellH - 2, color: rgb(1,0.92,0.75) });
+            page.drawText(String(cell.day), { x: cx + 4, y: cy + cellH - 14, size: 10, font, color: rgb(0,0,0) });
+          }
           const cellEvents = events.filter(e => e.dateISO === dateISO).slice(0,2);
-          cellEvents.forEach((ev, idx) => {
-            const y = cy + cellH - 28 - idx * 12;
+          const textSize = 9;
+          const lineHeight = 10; // approximate
+          let lineIdx = 0;
+          cellEvents.forEach(ev => {
             const color = parseHexColor(ev.color);
-            page.drawText(ev.text, { x: cx + 4, y, size: 9, font, color });
+            // Simple greedy word wrap within available width (cellW - 8)
+            const maxWidth = cellW - 8;
+            const words = ev.text.split(/\s+/);
+            let current = '';
+            const lines: string[] = [];
+            words.forEach(w => {
+              const test = current ? current + ' ' + w : w;
+              const width = font.widthOfTextAtSize(test, textSize);
+              if (width <= maxWidth) {
+                current = test;
+              } else {
+                if (current) lines.push(current);
+                // If single word longer than width, hard break it
+                if (font.widthOfTextAtSize(w, textSize) > maxWidth) {
+                  let part = '';
+                  for (const ch of w) {
+                    const t = part + ch;
+                    if (font.widthOfTextAtSize(t, textSize) > maxWidth) {
+                      if (part) lines.push(part);
+                      part = ch;
+                    } else {
+                      part = t;
+                    }
+                  }
+                  if (part) lines.push(part);
+                  current = '';
+                } else {
+                  current = w;
+                }
+              }
+            });
+            if (current) lines.push(current);
+            const maxLinesPerEvent = 2; // keep height controlled
+            lines.slice(0, maxLinesPerEvent).forEach(line => {
+              const yLine = cy + cellH - 28 - (lineIdx * lineHeight);
+              if (yLine > cy + 2) {
+                page.drawText(line, { x: cx + 4, y: yLine, size: textSize, font, color });
+                lineIdx++;
+              }
+            });
           });
         }
       }

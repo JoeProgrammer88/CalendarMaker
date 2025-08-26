@@ -6,6 +6,7 @@ import type { ProjectState, CalendarPageSizeKey, LayoutId, MonthSlot, SplitDirec
 import { getLayoutById } from '../util/layouts';
 import { exportAsPdf, exportCurrentPageAsPng } from '../util/exporter';
 import { debounce, getLastProjectId, loadProjectById, savePhotoBlob, saveProject, clearProject, deletePhotoBlob } from '../util/persistence';
+import { collectHolidayMap } from '../util/holidays';
 
 interface UIState {
   darkMode: boolean;
@@ -25,7 +26,6 @@ interface Actions {
   setStartMonth(m: number): void;
   setStartYear(y: number): void;
   setShowCommonHolidays(v: boolean): void;
-  setIncludeYearlyOverview(v: boolean): void;
   setIncludeCoverPage(v: boolean): void;
   setCoverStyle(style: 'large-photo' | 'grid-4x3'): void;
   setCoverPhoto(photoId: string | null): void;
@@ -57,8 +57,9 @@ interface Actions {
   saveNow(): Promise<void>;
   loadLastProject(): Promise<void>;
   clearAllData(): Promise<void>;
+  syncHolidayEvents(): void;
+  removeHolidayEvents(): void;
 }
-
 interface StoreShape {
   project: ProjectState;
   ui: UIState;
@@ -100,11 +101,11 @@ export const useCalendarStore = create<StoreShape>()(immer((set, get) => ({
       }
   }); },
   setOrientation(o) { set(s => { s.project.calendar.orientation = o; }); },
+  setShowCommonHolidays(v) { set(s => { s.project.calendar.showCommonHolidays = v; }); if (v) { get().actions.syncHolidayEvents(); } else { get().actions.removeHolidayEvents(); } },
   setSplitDirection(dir) { set(s => { s.project.calendar.splitDirection = dir; }); },
-  setStartMonth(m) { set(s => { s.project.calendar.startMonth = Math.max(0, Math.min(11, m)); }); },
-  setStartYear(y) { set(s => { s.project.calendar.startYear = y; }); },
-  setShowCommonHolidays(v) { set(s => { s.project.calendar.showCommonHolidays = v; }); },
-  setIncludeYearlyOverview(v) { set(s => { s.project.calendar.includeYearlyOverview = v; }); },
+  setStartMonth(m) { set(s => { s.project.calendar.startMonth = Math.max(0, Math.min(11, m)); }); if (get().project.calendar.showCommonHolidays) get().actions.syncHolidayEvents(); },
+  setStartYear(y) { set(s => { s.project.calendar.startYear = y; }); if (get().project.calendar.showCommonHolidays) get().actions.syncHolidayEvents(); },
+  
   setIncludeCoverPage(v) { set(s => { s.project.calendar.includeCoverPage = v; }); },
   setCoverStyle(style) { set(s => { s.project.calendar.coverStyle = style; }); },
   setCoverPhoto(photoId) { set(s => { s.project.calendar.coverPhotoId = photoId || undefined; }); get().actions.saveNow(); },
@@ -250,9 +251,23 @@ export const useCalendarStore = create<StoreShape>()(immer((set, get) => ({
           }
           s.project = loaded; s.ui.activeMonth = 0; s.ui.activeSlotId = 'main';
         });
+        if (loaded.calendar.showCommonHolidays) get().actions.syncHolidayEvents();
       }
   },
   async clearAllData() { const id = get().project.id; await clearProject(id); set(s => { s.project = defaultProject(); s.ui.activeMonth = 0; s.ui.activeSlotId = 'main'; }); }
+  ,
+  syncHolidayEvents() {
+    const cal = get().project.calendar;
+    if (!cal.showCommonHolidays) return;
+    get().actions.removeHolidayEvents();
+    const map = collectHolidayMap(cal.startMonth, cal.startYear, cal.months);
+    set(s => {
+      for (const iso of Object.keys(map)) {
+        s.project.events.push({ id: crypto.randomUUID(), dateISO: iso, text: map[iso], color: '#b15c00', visible: true, systemTag: 'holiday' });
+      }
+    });
+  },
+  removeHolidayEvents() { set(s => { s.project.events = s.project.events.filter(ev => ev.systemTag !== 'holiday'); }); }
   }
 })));
 

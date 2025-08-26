@@ -1,5 +1,4 @@
 import type { ProjectState, LayoutId } from '../types';
-
 const DEFAULT_LAYOUT: LayoutId = 'single-top';
 
 export function defaultProject(): ProjectState {
@@ -12,17 +11,16 @@ export function defaultProject(): ProjectState {
       startMonth: 0,
       startYear: year,
       months: 12,
-      layoutStylePerMonth: Array.from({length:12}, () => DEFAULT_LAYOUT),
+  layoutStylePerMonth: Array.from({length:12}, () => DEFAULT_LAYOUT),
   pageSize: 'Letter',
   orientation: 'portrait',
   splitDirection: 'tb',
-      showCommonHolidays: false,
-  includeYearlyOverview: false,
+  showCommonHolidays: false,
   includeCoverPage: false,
   coverStyle: 'large-photo',
   coverPhotoId: undefined as any,
   coverTransform: { scale: 1, translateX: 0, translateY: 0, rotationDegrees: 0 },
-      fontFamily: 'Inter'
+  fontFamily: 'Inter'
     },
     photos: [],
   coverPhotos: [],

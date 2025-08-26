@@ -18,7 +18,7 @@ Provide a fully client‑side (no backend service required) web application that
 
 ## 4. Scope
 ### In Scope (MVP)
-- Calendar types: Monthly (12 pages) + Cover; Single-Year overview (optional toggle).  
+- Calendar types: Monthly (12 pages) + Cover.  
   - Cover page styles: Large Photo (image occupies ~90% of page with a ~10% date-range footer) or 4×3 Photo Grid (12 month thumbnails) with a ~10% footer.  
 - Page sizes: 5"×7" (portrait & landscape), US Letter (8.5"×11") portrait & landscape, A4, 11"×17" (tabloid) portrait & landscape, 13"×19" (Super B) landscape (portrait if feasible).  
   - UX rule: Selecting 5×7 defaults orientation to Landscape and applies a left/right split layout (photo left, calendar right).  
@@ -39,7 +39,7 @@ Provide a fully client‑side (no backend service required) web application that
 - Non-destructive crop (store transform matrix only per slot).  
   
 - Event/holiday entry (simple: date + short text) stored locally.  
-- Optional toggle: show common holidays (initial limited US federal set + New Year’s Eve) on yearly overview (may be downgraded to stretch if time).  
+  
   
 - Month label displayed above each monthly grid (preview and export).  
 - Localization: month & weekday names (English only MVP, extensible).  
@@ -76,7 +76,7 @@ Provide a fully client‑side (no backend service required) web application that
 9. (Week numbers removed.)  
 10. (Caption feature removed.)  
 11. As a user I can pick a multi-photo layout for a month to showcase multiple images.  
-12. As a user I can toggle display of common holidays on the yearly overview.  
+12. As a user I can toggle automatic US federal holiday events & highlighting on monthly pages.  
 13. As a user I can select from several font styles to match my aesthetic.  
 
 ### Secondary
@@ -92,7 +92,7 @@ Provide a fully client‑side (no backend service required) web application that
   
 - Header bar: Draw a shaded header background above the weekday row and center the month/year label within it (preview + export).  
 - Gridlines: Omit the horizontal gridline directly under the header bar; preserve the top line of the first week row. Vertical gridlines start below the header bar.  
-- Yearly overview page supports optional injection of common holidays (data file).  
+  
 
 ### 6.2 Photo Handling
 - Accept JPG, PNG, WebP (MVP) up to e.g. 25 MB each (config).  
@@ -254,7 +254,7 @@ Rendering scales rects to pixel canvas size.
 6. (Undo removed.)  
 7. All logic works offline after first load (airplane mode test).  
 8. Switching a month layout from single to multi-photo preserves existing first photo in slot[0].  
-9. Enabling common holidays populates yearly overview within <150ms.  
+9. Enabling US federal holiday auto events shades those days in <150ms.  
 10. Changing font updates preview within <150ms and export uses selected font.  
 
 ## 18. Milestones
@@ -304,7 +304,7 @@ Rendering scales rects to pixel canvas size.
   - Export progress indicator (button label + progress bar)
   - Shaded header bar with centered month/year label; no gridline directly under header; top line of the first week row preserved (preview + export parity)
   - Cover page: Large Photo (≈90% image + 10% footer) and 4×3 month grid options (precede monthly pages)
-  - Yearly Overview page (optional toggle) with mini-month grids; basic fixed-date US holidays highlight when enabled
+  
   - Split toggle with auto-switch to 5×7 Landscape; multi-photo layouts use columns for 2/3 photos and 2×2 uses half-page as specified
   - Dual/Triple Top/Bottom variants are exactly 50% photo area / 50% grid; Left/Right variants constrain photos to left 50% and grid to right 50%
   - Preview polish: eliminated header/photo overlap in 5×7 Landscape by precise header background sizing
@@ -315,7 +315,7 @@ Rendering scales rects to pixel canvas size.
 
 - Underway
   - PDF font embedding/subsetting polish to match selected UI font
-  - Yearly Overview: expand holiday dataset (and handle cross-year spans)
+  
 
 - Pending
   
@@ -326,7 +326,7 @@ Rendering scales rects to pixel canvas size.
   1) Embed selected fonts for vector text in PDF (Inter, Merriweather, etc.)
   2) Add an export progress modal with cancel
   3) Implement persistence (IndexedDB + autosave/restore) and migrations
-  4) Expand yearly overview holiday dataset and handle cross-year spans
+  
 
 ---
 End of Specification.

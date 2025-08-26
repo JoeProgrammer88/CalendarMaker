@@ -1,6 +1,6 @@
 # Calendar Customizer
 
-A fully client-side React + TypeScript web application for designing printable photo calendars (cover + monthly pages + yearly overview) with multi-photo layouts, image transforms, events, and optional common US holidays. All image processing and data persistence happen locally (IndexedDB / LocalStorage) to preserve privacy and reduce hosting costs.
+A fully client-side React + TypeScript web application for designing printable photo calendars (cover + monthly pages) with multi-photo layouts, image transforms, events, and optional automatic US federal holiday events & highlighting. All image processing and data persistence happen locally (IndexedDB / LocalStorage) to preserve privacy and reduce hosting costs.
 
 ## ✨ Key Goals
 - 100% client-side: no backend required.
@@ -17,8 +17,9 @@ A fully client-side React + TypeScript web application for designing printable p
 - Non-destructive transforms per slot (zoom, pan, rotate, reset).
 - Calendar grid with month label inside the header.
 - Events: add/edit/delete via modal (double‑click a day), visibility toggle; render in grid.
-- (Per-month caption removed.)
-- Yearly Overview page (optional) with mini-month grids; basic US holiday highlights.
+-- (Per-month caption removed.)
+-- Optional automatic US federal holiday events/highlighting (New Year’s, MLK Day, Presidents Day, Memorial Day, Juneteenth, Independence Day, Labor Day, Columbus Day, Veterans Day, Thanksgiving, Christmas).
+ 
 - Cover page (optional): Large Photo (90% photo) or 4×3 Month Grid (12 thumbnails), both with a 10% date range footer.
 - PDF export: vector text (standard fonts), photos at ~300 DPI, precise grid lines (no header underline), shaded header background, progress indicator.
 - Dark / light UI theme toggle.
@@ -30,7 +31,7 @@ A fully client-side React + TypeScript web application for designing printable p
 
 ## ⏳ In Progress / Remaining
 - PDF font embedding/subsetting polish (embed TTFs when available; fallback works).
-- Expanded holiday dataset and cross‑year handling (overview).
+ 
 - Resolution warnings for low‑res images (stretch).
 - Export progress UI polish (modal with cancel).
 - Accessibility polish (ARIA/focus, shortcuts refinement).
@@ -109,7 +110,7 @@ Notes:
 ## ♻️ Development Workflow
 1. Select a page size, orientation, and layout (use Split toggle for TB/LR).
 2. Upload photos and assign to slots; adjust transforms.
-3. Add events; toggle Overview holidays if desired.
+3. Add events; optionally enable US federal holiday auto events (read‑only system events).
 4. Optional: Include a Cover page and choose the style.
 5. Export multi-page PDF for printing.
 
@@ -130,7 +131,7 @@ Notes:
 | Calendar Grid & Events | Done |
 | Split Toggle + LR Variants | Done |
 | Cover Page Options | Done |
-| Holidays Toggle + Year Overview | Done (basic set) |
+ 
 | Export Refinement (fonts embedding) | In Progress |
 | Persistence + Autosave | Done |
 | PWA + Offline + Polish | Done |
