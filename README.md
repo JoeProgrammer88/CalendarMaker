@@ -17,13 +17,13 @@ A fully client-side React + TypeScript web application for designing printable p
 - Non-destructive transforms per slot (zoom, pan, rotate, reset).
 - Calendar grid with month label inside the header, optional ISO week numbers.
 - Events: add/edit/delete via modal (double‑click a day), visibility toggle; render in grid.
-- Caption per month (preview + export).
+- (Per-month caption removed.)
 - Yearly Overview page (optional) with mini-month grids; basic US holiday highlights.
 - Cover page (optional): Large Photo (90% photo) or 4×3 Month Grid (12 thumbnails), both with a 10% date range footer.
 - PDF export: vector text (standard fonts), photos at ~300 DPI, precise grid lines (no header underline), shaded header background, progress indicator.
 - Dark / light UI theme toggle.
-- Undo/Redo history, keyboard transforms (arrows/+/-), and selection guards.
-- Alt text per photo and error toasts; “Clear all data” action.
+- Keyboard transforms (arrows/+/-) and selection guards.
+- Error toasts; “Clear all data” action.
 - Export current page as PNG.
 - Persistence: autosave/restore with IndexedDB (photos) + LocalStorage (last project), schema version + migrate stub.
 - PWA: precaching via Vite PWA (Workbox) with runtime caching (assets/Google Fonts); ready for GitHub Pages deploy (base path + SPA 404).
@@ -109,7 +109,7 @@ Notes:
 ## ♻️ Development Workflow
 1. Select a page size, orientation, and layout (use Split toggle for TB/LR).
 2. Upload photos and assign to slots; adjust transforms.
-3. Add captions and events; toggle week numbers or Overview holidays if desired.
+3. Add events; toggle week numbers or Overview holidays if desired.
 4. Optional: Include a Cover page and choose the style.
 5. Export multi-page PDF for printing.
 

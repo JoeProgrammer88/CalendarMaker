@@ -37,7 +37,7 @@ Provide a fully client‑side (no backend service required) web application that
 - Per-month photo assignment / reuse (multiple slots where layout supports).  
 - Photo edit tools: zoom (scale), pan (x/y translate), rotate (0°, 90°, 180°, 270°), optional free rotation (future), reset (per slot).  
 - Non-destructive crop (store transform matrix only per slot).  
-- Add simple text caption under photo area (multi-photo layouts: shared caption).  
+  
 - Event/holiday entry (simple: date + short text) stored locally.  
 - Optional toggle: show common holidays (initial limited US federal set + New Year’s Eve) on yearly overview (may be downgraded to stretch if time).  
 - Option to show week numbers (ISO).  
@@ -74,7 +74,7 @@ Provide a fully client‑side (no backend service required) web application that
 7. As a user I can return later and continue editing my saved calendar.  
 8. As a user I can reset all edits if I want to start over.  
 9. As a user I can toggle week numbers in the grid.  
-10. As a user I can add a caption under the monthly photo area.  
+10. (Caption feature removed.)  
 11. As a user I can pick a multi-photo layout for a month to showcase multiple images.  
 12. As a user I can toggle display of common holidays on the yearly overview.  
 13. As a user I can select from several font styles to match my aesthetic.  
@@ -108,7 +108,7 @@ Provide a fully client‑side (no backend service required) web application that
 - Slot selection: clicking a photo slot highlights it; transforms apply to active slot.  
 - Font picker: radio/list with preview swatches + fallback.  
 - Keyboard: arrow keys nudge photo (1px), Shift+arrow (10px), +/- or wheel for zoom (active slot).  
-- Undo/Redo stack (limit e.g. 50) covers slot changes individually and font changes.  
+  
 
 ### 6.4 Events / Holidays
 - Data model: {id, dateISO (YYYY-MM-DD), text, color?, visible}.  
@@ -135,7 +135,7 @@ Project {
   meta: { createdAt, updatedAt, appVersion },
   calendar: { startMonth, startYear, months: 12|custom, layoutStylePerMonth: [layoutId], pageSize, orientation, showWeekNumbers, showCommonHolidays, fontFamily },
   photos: [ Photo { id, originalBlobRef, previewBlobRef?, name, exif?, assignedMonths: [index...] } ],
-  monthData: [ MonthPage { index, slots: [ { slotId, photoId, transform } ], caption, events: [eventId...] } ],
+  monthData: [ MonthPage { index, slots: [ { slotId, photoId, transform } ], events: [eventId...] } ],
   events: [ Event ],
 }
 ```
@@ -151,7 +151,7 @@ Project {
 - ARIA labels on interactive canvas controls & font picker.  
 - Focus indication for selected photo slot.  
 - Color contrast AA for UI.  
-- Alt text input for each photo (applies across slots using that photo).  
+  
 - English only; architecture supports locale pack JSON.  
 
 ### 6.9 Performance Targets
@@ -177,7 +177,7 @@ Project {
 
 ## 8. Technology Stack (Proposed)
 - Framework: React + TypeScript (component-oriented, state mgmt).  
-- State Management: Zustand or Redux Toolkit (simple undo/redo).  
+- State Management: Zustand (lightweight).  
 - Canvas Rendering: Native Canvas 2D; optional Fabric.js (evaluate overhead) – MVP: custom minimal utilities.  
 - PDF Generation: pdf-lib (vector text + embedded images) OR jsPDF (compare quality).  
 - Image Processing: createImageBitmap, OffscreenCanvas (where available), fallback to standard Canvas.  
@@ -251,7 +251,7 @@ Rendering scales rects to pixel canvas size.
 3. Refreshing the page restores the last auto-saved project state.  
 4. Removing a photo unassigns it gracefully from any months (slots referencing removed photo become empty).  
 5. Week numbers toggle affects all pages within <250ms.  
-6. Undo (Ctrl+Z) after zooming a photo slot returns previous zoom.  
+6. (Undo removed.)  
 7. All logic works offline after first load (airplane mode test).  
 8. Switching a month layout from single to multi-photo preserves existing first photo in slot[0].  
 9. Enabling common holidays populates yearly overview within <150ms.  
@@ -266,7 +266,7 @@ Rendering scales rects to pixel canvas size.
 4. Export (PNG then PDF) (Week 4). [In Progress]
   - Done: PDF month/year label; calendar grid with day numbers, ISO week numbers; events (with color); caption above grid; photos rendered in slots with transforms at 300 DPI; export progress indicator.
   - Pending: Embed selected fonts for vector text (match UI fonts), progress dialog polish.
-5. Persistence + Undo/Redo + Layout switching migrations (Week 5). [Pending]
+5. Persistence + Layout switching migrations (Week 5). [Pending]
 6. PWA + Polish + Accessibility & QA (Week 6). [Pending]
 
 ## 19. Risks & Mitigations
@@ -299,7 +299,7 @@ Rendering scales rects to pixel canvas size.
   - Month grid generation and preview rendering
   - Events CRUD via modal; double‑click on day to add/edit; visibility toggle; tooltips for truncated events in preview
   - ISO week numbers toggle (preview + export)
-  - Caption per month (preview + export)
+  - (Per-month caption removed)
   - PDF export: real grid with day numbers, events (colors), caption, photos rendered at 300 DPI per slot
   - Export progress indicator (button label + progress bar)
   - Shaded header bar with centered month/year label; no gridline directly under header; top line of the first week row preserved (preview + export parity)
@@ -309,7 +309,7 @@ Rendering scales rects to pixel canvas size.
   - Dual/Triple Top/Bottom variants are exactly 50% photo area / 50% grid; Left/Right variants constrain photos to left 50% and grid to right 50%
   - Preview polish: eliminated header/photo overlap in 5×7 Landscape by precise header background sizing
   - Persistence: IndexedDB for blobs + project JSON with autosave/restore; schema version + migrate
-  - Undo/Redo history (Ctrl/Cmd+Z/Y); keyboard transforms (arrows +/-); alt text per photo; error toasts; Clear All Data
+  - Keyboard transforms (arrows +/-); error toasts; Clear All Data
   - PNG export: current page as high-DPI PNG
   - PWA: Vite PWA (Workbox) with precache and runtime caching; GitHub Pages ready (base path + SPA 404)
 

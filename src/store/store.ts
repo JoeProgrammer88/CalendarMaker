@@ -15,8 +15,6 @@ interface UIState {
   eventDialog: { open: boolean; dateISO: string | null; editEventId: string | null };
   toasts: { id: string; text: string; type: 'info' | 'success' | 'error' }[];
   exportProgress: number; // 0..1
-  history: ProjectState[];
-  future: ProjectState[];
 }
 
 interface Actions {
@@ -59,8 +57,6 @@ interface Actions {
   setExportProgress(p: number): void;
   saveNow(): Promise<void>;
   loadLastProject(): Promise<void>;
-  undo(): void;
-  redo(): void;
   clearAllData(): Promise<void>;
 }
 
@@ -70,19 +66,11 @@ interface StoreShape {
   actions: Actions;
 }
 
-function safeClone<T>(obj: T): T {
-  try {
-    // Prefer structuredClone when available and object is cloneable
-    return (structuredClone as any)(obj);
-  } catch {
-    // Fallback to JSON for plain data
-    return JSON.parse(JSON.stringify(obj));
-  }
-}
+// (Undo/redo removed; safeClone no longer needed)
 
 export const useCalendarStore = create<StoreShape>()(immer((set, get) => ({
   project: defaultProject(),
-  ui: { darkMode: false, activeMonth: 0, exporting: false, activeSlotId: 'main', eventDialog: { open: false, dateISO: null, editEventId: null }, toasts: [], exportProgress: 0, history: [], future: [] },
+  ui: { darkMode: false, activeMonth: 0, exporting: false, activeSlotId: 'main', eventDialog: { open: false, dateISO: null, editEventId: null }, toasts: [], exportProgress: 0 },
   actions: {
     toggleDarkMode() { set(s => { s.ui.darkMode = !s.ui.darkMode; }); },
   setPageSize(size) { set(s => { 
@@ -136,11 +124,9 @@ export const useCalendarStore = create<StoreShape>()(immer((set, get) => ({
     (window as any).__cm_save_debounced__();
   },
   resetCoverTransform() { set(s => { s.project.calendar.coverTransform = { scale:1, translateX:0, translateY:0, rotationDegrees:0 }; }); },
-  resetProject() { set(s => { s.project = defaultProject(); s.ui.activeMonth = 0; s.ui.activeSlotId = 'main'; s.ui.history = []; s.ui.future = []; }); get().actions.saveNow(); },
-    // Ensure month slots match layout definition (preserve existing where possible)
-    setLayoutForMonth(monthIndex, layoutId) { set(s => {
-      // Push a deep copy of the previous project (outside of draft) to history
-      s.ui.history.push(safeClone(get().project)); s.ui.future = [];
+  resetProject() { set(s => { s.project = defaultProject(); s.ui.activeMonth = 0; s.ui.activeSlotId = 'main'; }); get().actions.saveNow(); },
+  // Ensure month slots match layout definition (preserve existing where possible)
+  setLayoutForMonth(monthIndex, layoutId) { set(s => {
       s.project.calendar.layoutStylePerMonth[monthIndex] = layoutId;
       const layout = getLayoutById(layoutId);
       const page = s.project.monthData[monthIndex];
@@ -178,7 +164,7 @@ export const useCalendarStore = create<StoreShape>()(immer((set, get) => ({
       }
     }); },
     setActiveSlot(slotId) { set(s => { s.ui.activeSlotId = slotId; }); },
-  setFontFamily(font) { set(s => { s.ui.history.push(safeClone(get().project)); s.ui.future = []; s.project.calendar.fontFamily = font; }); get().actions.saveNow(); },
+  setFontFamily(font) { set(s => { s.project.calendar.fontFamily = font; }); get().actions.saveNow(); },
   openEventDialog(dateISO, editEventId) { set(s => { s.ui.eventDialog = { open: true, dateISO, editEventId: editEventId ?? null }; }); },
   closeEventDialog() { set(s => { s.ui.eventDialog = { open: false, dateISO: null, editEventId: null }; }); },
   async exportProject() { if (get().ui.exporting) return; set(s => { s.ui.exporting = true; s.ui.exportProgress = 0; }); try { await exportAsPdf(get().project, (p: number) => { set(s => { s.ui.exportProgress = p; }); }); } finally { set(s => { s.ui.exporting = false; s.ui.exportProgress = 0; }); } },
@@ -238,10 +224,10 @@ export const useCalendarStore = create<StoreShape>()(immer((set, get) => ({
       (window as any).__cm_save_debounced__();
     },
   resetActiveSlotTransform() { set(s => { const m = s.ui.activeMonth; const monthPage = s.project.monthData[m]; const slot = monthPage.slots.find((sl: MonthSlot) => sl.slotId === s.ui.activeSlotId); if (slot) { slot.transform = { scale:1, translateX:0, translateY:0, rotationDegrees:0 }; } }); },
-  addEvent(input) { set(s => { s.ui.history.push(safeClone(get().project)); s.ui.future = []; const id = crypto.randomUUID(); s.project.events.push({ id, dateISO: input.dateISO, text: input.text, color: input.color, visible: true }); }); get().actions.saveNow(); },
+  addEvent(input) { set(s => { const id = crypto.randomUUID(); s.project.events.push({ id, dateISO: input.dateISO, text: input.text, color: input.color, visible: true }); }); get().actions.saveNow(); },
   deleteEvent(id) { set(s => { s.project.events = s.project.events.filter(ev => ev.id !== id); }); },
   toggleEventVisible(id) { set(s => { const ev = s.project.events.find(e => e.id === id); if (ev) ev.visible = !ev.visible; }); get().actions.saveNow(); },
-  updateEvent(id, input) { set(s => { s.ui.history.push(safeClone(get().project)); s.ui.future = []; const ev = s.project.events.find(e => e.id === id); if (!ev) return; if (input.text !== undefined) ev.text = input.text; if (input.color !== undefined) ev.color = input.color; if (input.dateISO !== undefined) ev.dateISO = input.dateISO; }); get().actions.saveNow(); },
+  updateEvent(id, input) { set(s => { const ev = s.project.events.find(e => e.id === id); if (!ev) return; if (input.text !== undefined) ev.text = input.text; if (input.color !== undefined) ev.color = input.color; if (input.dateISO !== undefined) ev.dateISO = input.dateISO; }); get().actions.saveNow(); },
     addToast(text, type = 'info') {
       const id = crypto.randomUUID();
       set(s => { s.ui.toasts.push({ id, text, type }); });
@@ -268,9 +254,7 @@ export const useCalendarStore = create<StoreShape>()(immer((set, get) => ({
         });
       }
   },
-  undo() { set(s => { const prev = s.ui.history.pop(); if (prev) { s.ui.future.push(safeClone(get().project)); s.project = prev; } }); },
-  redo() { set(s => { const next = s.ui.future.pop(); if (next) { s.ui.history.push(safeClone(get().project)); s.project = next; } }); },
-  async clearAllData() { const id = get().project.id; await clearProject(id); set(s => { s.project = defaultProject(); s.ui.history = []; s.ui.future = []; s.ui.activeMonth = 0; s.ui.activeSlotId = 'main'; }); }
+  async clearAllData() { const id = get().project.id; await clearProject(id); set(s => { s.project = defaultProject(); s.ui.activeMonth = 0; s.ui.activeSlotId = 'main'; }); }
   }
 })));
 
