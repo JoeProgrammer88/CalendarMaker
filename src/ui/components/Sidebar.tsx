@@ -151,7 +151,6 @@ export const Sidebar: React.FC = () => {
             );
           })()}
         </label>
-  <button onClick={() => { if (confirm('Reset the project to defaults? This will clear photos and events.')) state.resetProject(); }} className="w-full text-xs bg-red-600 text-white rounded py-1 hover:bg-red-700">Reset Project</button>
       </div>
   <div className="p-3 font-semibold uppercase tracking-wide text-xs text-gray-600 dark:text-gray-300">Photos</div>
       <div className="px-3 pb-4 space-y-2">

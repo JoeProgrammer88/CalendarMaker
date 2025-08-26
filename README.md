@@ -112,7 +112,7 @@ Notes:
 2. Upload photos and assign to slots; adjust transforms.
 3. Add events; optionally enable US federal holiday auto events (read‑only system events).
 4. Optional: Include a Cover page and choose the style.
-5. Export multi-page PDF for printing.
+5. Export multi-page PDF (and optionally a single page PNG).
 
 ## 🧪 Testing Strategy (Planned)
 - Pure functions (calendar generation, layout scaling) via unit tests (future Jest / Vitest setup).
@@ -121,7 +121,7 @@ Notes:
 ## 💾 Persistence Plan
 - IndexedDB: Photo original + preview blobs.
 - JSON Project Object: Calendar settings, slots, events.
-- Auto-save debounce (~1s) & manual “Reset Project”.
+- Auto-save debounce (~1s).
 
 ## 📅 Roadmap (Milestones)
 | Milestone | Status |
