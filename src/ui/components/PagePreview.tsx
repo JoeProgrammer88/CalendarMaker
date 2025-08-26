@@ -216,11 +216,7 @@ export const PagePreview: React.FC = () => {
       <div className="relative bg-white dark:bg-gray-800 shadow-inner" style={{ width: size.width, height: size.height, fontFamily }}>
         {slotNodes}
         {gridNode}
-        {layout && monthPage.caption && (
-          <div className="absolute text-center text-[12px] text-gray-800 dark:text-gray-100 px-4" style={{ left: layout.grid.x * size.width, width: layout.grid.w * size.width, top: (layout.grid.y * size.height) - 22 }}>
-            {monthPage.caption}
-          </div>
-        )}
+  {/* Caption display removed */}
       </div>
   <div className="text-xs text-gray-500 dark:text-gray-400">Preview (not final resolution)</div>
     </div>

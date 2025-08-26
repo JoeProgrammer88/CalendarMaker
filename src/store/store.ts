@@ -39,7 +39,6 @@ interface Actions {
   setActiveMonth(idx: number): void;
   setActiveSlot(slotId: string): void;
   setFontFamily(font: string): void;
-  setCaptionForActiveMonth(text: string): void;
   openEventDialog(dateISO: string, editEventId?: string | null): void;
   closeEventDialog(): void;
   exportProject(): Promise<void>;
@@ -180,13 +179,6 @@ export const useCalendarStore = create<StoreShape>()(immer((set, get) => ({
     }); },
     setActiveSlot(slotId) { set(s => { s.ui.activeSlotId = slotId; }); },
   setFontFamily(font) { set(s => { s.ui.history.push(safeClone(get().project)); s.ui.future = []; s.project.calendar.fontFamily = font; }); get().actions.saveNow(); },
-  setCaptionForActiveMonth(text) { set(s => { const m = s.ui.activeMonth; const page = s.project.monthData[m]; if (page) page.caption = text; });
-      // Debounce caption saves
-      if (!(window as any).__cm_save_debounced__) {
-        (window as any).__cm_save_debounced__ = debounce(() => get().actions.saveNow(), 800);
-      }
-      (window as any).__cm_save_debounced__();
-    },
   openEventDialog(dateISO, editEventId) { set(s => { s.ui.eventDialog = { open: true, dateISO, editEventId: editEventId ?? null }; }); },
   closeEventDialog() { set(s => { s.ui.eventDialog = { open: false, dateISO: null, editEventId: null }; }); },
   async exportProject() { if (get().ui.exporting) return; set(s => { s.ui.exporting = true; s.ui.exportProgress = 0; }); try { await exportAsPdf(get().project, (p: number) => { set(s => { s.ui.exportProgress = p; }); }); } finally { set(s => { s.ui.exporting = false; s.ui.exportProgress = 0; }); } },

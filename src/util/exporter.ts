@@ -449,11 +449,7 @@ export async function exportAsPdf(project: ProjectState, onProgress?: (p: number
       }
     }
 
-    // Caption above grid
-    const pageData = project.monthData[m];
-    if (pageData?.caption) {
-      page.drawText(pageData.caption, { x: gx + 4, y: gy + gh + 6, size: 12, font, color: rgb(0,0,0) });
-    }
+  // Caption removed
     // Progress update per page
   pageCounter++;
   if (onProgress) onProgress(pageCounter / totalPages);

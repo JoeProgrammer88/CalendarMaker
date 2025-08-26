@@ -19,8 +19,7 @@ export const RightPanel: React.FC = () => {
       </select>
   <div className="text-xs text-gray-500 dark:text-gray-400 mb-4">Preview:</div>
   <div className="border border-gray-300 dark:border-gray-600 rounded p-2 mb-4 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100" style={{ fontFamily }}>The quick brown fox jumps over the lazy dog 123</div>
-  <CaptionEditor />
-  <AltTextEditor />
+  {/* Caption and Alt text editors removed intentionally */}
   <div className="font-semibold uppercase tracking-wide text-xs text-gray-600 dark:text-gray-300 mb-2">Actions</div>
       <ExportButton />
       <div className="mt-2 grid grid-cols-2 gap-2">
@@ -51,40 +50,4 @@ const ExportButton: React.FC = () => {
   );
 };
 
-const AltTextEditor: React.FC = () => {
-  const photos = useCalendarStore(s => s.project.photos);
-  const activePhotoId = useCalendarStore(s => {
-    const m = s.ui.activeMonth; const slotId = s.ui.activeSlotId; const page = s.project.monthData[m];
-    const slot = page?.slots.find(sl => sl.slotId === slotId) || page?.slots[0];
-    return slot?.photoId;
-  });
-  const setAlt = useCalendarStore(s => s.actions.saveNow); // reuse save after local update
-  if (!activePhotoId) return null;
-  const p = photos.find(pp => pp.id === activePhotoId);
-  if (!p) return null;
-  return (
-    <div className="mb-4">
-  <div className="font-semibold uppercase tracking-wide text-xs text-gray-600 dark:text-gray-300 mb-2">Alt Text</div>
-  <input defaultValue={p.alt || ''} onBlur={e => { p.alt = e.target.value; setAlt(); }} className="w-full bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded px-2 py-1" placeholder="Describe the photo for accessibility" />
-    </div>
-  );
-};
-
-const CaptionEditor: React.FC = () => {
-  const { caption, setCaption } = useCalendarStore(s => ({
-    caption: s.project.monthData[s.ui.activeMonth]?.caption ?? '',
-    setCaption: s.actions.setCaptionForActiveMonth
-  }));
-  return (
-    <div className="mb-4">
-  <div className="font-semibold uppercase tracking-wide text-xs text-gray-600 dark:text-gray-300 mb-2">Caption</div>
-  <textarea
-        value={caption}
-        onChange={e => setCaption(e.target.value)}
-        rows={3}
-        className="w-full bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-300 border border-gray-300 dark:border-gray-600 rounded px-2 py-1"
-        placeholder="Add a caption for this month"
-      />
-    </div>
-  );
-};
+// (CaptionEditor and AltTextEditor components removed)

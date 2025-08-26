@@ -26,9 +26,9 @@ export type LayoutId =
 export interface PhotoTransform { scale: number; translateX: number; translateY: number; rotationDegrees: number; }
 // translateX / translateY are normalized offsets relative to slot width/height (1 = 100% of slot dimension)
 export interface MonthSlot { slotId: string; photoId?: string; transform: PhotoTransform; }
-export interface MonthPage { index: number; slots: MonthSlot[]; caption?: string; events: string[]; }
+export interface MonthPage { index: number; slots: MonthSlot[]; events: string[]; }
 
-export interface PhotoMeta { id: string; originalBlobRef?: string; previewBlobRef?: string; name: string; assignedMonths: number[]; previewUrl?: string; alt?: string; }
+export interface PhotoMeta { id: string; originalBlobRef?: string; previewBlobRef?: string; name: string; assignedMonths: number[]; previewUrl?: string; }
 export interface EventItem { id: string; dateISO: string; text: string; color?: string; visible: boolean; }
 
 export type SplitDirection = 'tb' | 'lr'; // tb: top/bottom, lr: left/right

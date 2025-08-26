@@ -27,7 +27,7 @@ export function defaultProject(): ProjectState {
     },
     photos: [],
   coverPhotos: [],
-  monthData: Array.from({length:12}, (_,i) => ({ index: i, slots: [ { slotId: 'main', photoId: undefined, transform: { scale:1, translateX:0, translateY:0, rotationDegrees:0 } } ], caption: '', events: [] })),
+  monthData: Array.from({length:12}, (_,i) => ({ index: i, slots: [ { slotId: 'main', photoId: undefined, transform: { scale:1, translateX:0, translateY:0, rotationDegrees:0 } } ], events: [] })),
     events: []
   };
 }
