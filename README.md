@@ -1,6 +1,6 @@
 # Calendar Customizer
 
-A fully client-side React + TypeScript web application for designing printable photo calendars (cover + monthly pages + yearly overview) with multi-photo layouts, image transforms, events, and optional common US holidays. All image processing and data persistence happen locally (IndexedDB / LocalStorage) to preserve privacy and reduce hosting costs.
+A fully client-side React + TypeScript web application for designing printable photo calendars (cover + monthly pages) with multi-photo layouts, image transforms, events, and optional automatic US federal holiday events & highlighting. All image processing and data persistence happen locally (IndexedDB / LocalStorage) to preserve privacy and reduce hosting costs.
 
 ## ✨ Key Goals
 - 100% client-side: no backend required.
@@ -15,22 +15,23 @@ A fully client-side React + TypeScript web application for designing printable p
 - Multi-layout system (single, dual, triple, quad, full-bleed) with LR variants; dual/triple TB use exact 50% photo/50% grid.
 - Photo upload library, thumbnails, per-slot assignment.
 - Non-destructive transforms per slot (zoom, pan, rotate, reset).
-- Calendar grid with month label inside the header, optional ISO week numbers.
+- Calendar grid with month label inside the header.
 - Events: add/edit/delete via modal (double‑click a day), visibility toggle; render in grid.
-- Caption per month (preview + export).
-- Yearly Overview page (optional) with mini-month grids; basic US holiday highlights.
+-- (Per-month caption removed.)
+-- Optional automatic US federal holiday events/highlighting (New Year’s, MLK Day, Presidents Day, Memorial Day, Juneteenth, Independence Day, Labor Day, Columbus Day, Veterans Day, Thanksgiving, Christmas).
+ 
 - Cover page (optional): Large Photo (90% photo) or 4×3 Month Grid (12 thumbnails), both with a 10% date range footer.
 - PDF export: vector text (standard fonts), photos at ~300 DPI, precise grid lines (no header underline), shaded header background, progress indicator.
 - Dark / light UI theme toggle.
-- Undo/Redo history, keyboard transforms (arrows/+/-), and selection guards.
-- Alt text per photo and error toasts; “Clear all data” action.
+- Keyboard transforms (arrows/+/-) and selection guards.
+- Error toasts; “Clear all data” action.
 - Export current page as PNG.
 - Persistence: autosave/restore with IndexedDB (photos) + LocalStorage (last project), schema version + migrate stub.
 - PWA: precaching via Vite PWA (Workbox) with runtime caching (assets/Google Fonts); ready for GitHub Pages deploy (base path + SPA 404).
 
 ## ⏳ In Progress / Remaining
 - PDF font embedding/subsetting polish (embed TTFs when available; fallback works).
-- Expanded holiday dataset and cross‑year handling (overview).
+ 
 - Resolution warnings for low‑res images (stretch).
 - Export progress UI polish (modal with cancel).
 - Accessibility polish (ARIA/focus, shortcuts refinement).
@@ -109,9 +110,9 @@ Notes:
 ## ♻️ Development Workflow
 1. Select a page size, orientation, and layout (use Split toggle for TB/LR).
 2. Upload photos and assign to slots; adjust transforms.
-3. Add captions and events; toggle week numbers or Overview holidays if desired.
+3. Add events; optionally enable US federal holiday auto events (read‑only system events).
 4. Optional: Include a Cover page and choose the style.
-5. Export multi-page PDF for printing.
+5. Export multi-page PDF (and optionally a single page PNG).
 
 ## 🧪 Testing Strategy (Planned)
 - Pure functions (calendar generation, layout scaling) via unit tests (future Jest / Vitest setup).
@@ -120,7 +121,7 @@ Notes:
 ## 💾 Persistence Plan
 - IndexedDB: Photo original + preview blobs.
 - JSON Project Object: Calendar settings, slots, events.
-- Auto-save debounce (~1s) & manual “Reset Project”.
+- Auto-save debounce (~1s).
 
 ## 📅 Roadmap (Milestones)
 | Milestone | Status |
@@ -130,7 +131,7 @@ Notes:
 | Calendar Grid & Events | Done |
 | Split Toggle + LR Variants | Done |
 | Cover Page Options | Done |
-| Holidays Toggle + Year Overview | Done (basic set) |
+ 
 | Export Refinement (fonts embedding) | In Progress |
 | Persistence + Autosave | Done |
 | PWA + Offline + Polish | Done |

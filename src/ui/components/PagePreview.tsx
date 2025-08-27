@@ -3,10 +3,11 @@ import { useCalendarStore } from '../../store/store';
 import { getLayoutById } from '../../util/layouts';
 import { getEffectiveLayout } from '../../util/constants';
 import { computePagePixelSize } from '../../util/pageSize';
-import { generateMonthGrid, isoWeekNumber } from '../../util/calendar';
+import { generateMonthGrid } from '../../util/calendar';
+import { collectHolidayMap } from '../../util/holidays';
 
 export const PagePreview: React.FC = () => {
-  const { monthIndex, layoutId, pageSizeKey, orientation, splitDirection, photos, monthPage, activeSlotId, setActiveSlot, updateTransform, startMonth, startYear, showWeekNumbers, fontFamily, allEvents, openEventDialog } = useCalendarStore(s => ({
+  const { monthIndex, layoutId, pageSizeKey, orientation, splitDirection, photos, monthPage, activeSlotId, setActiveSlot, updateTransform, startMonth, startYear, months, fontFamily, allEvents, openEventDialog, showCommonHolidays } = useCalendarStore(s => ({
     monthIndex: s.ui.activeMonth,
     layoutId: s.project.calendar.layoutStylePerMonth[s.ui.activeMonth],
     pageSizeKey: s.project.calendar.pageSize,
@@ -19,10 +20,11 @@ export const PagePreview: React.FC = () => {
     updateTransform: s.actions.updateActiveSlotTransform,
     startMonth: s.project.calendar.startMonth,
     startYear: s.project.calendar.startYear,
-    showWeekNumbers: s.project.calendar.showWeekNumbers,
+    months: s.project.calendar.months,
     fontFamily: s.project.calendar.fontFamily,
   allEvents: s.project.events,
-  openEventDialog: s.actions.openEventDialog
+  openEventDialog: s.actions.openEventDialog,
+  showCommonHolidays: s.project.calendar.showCommonHolidays ?? false
   }));
   const layout = getEffectiveLayout(layoutId, splitDirection);
   const previewDpi = 100;
@@ -126,10 +128,13 @@ export const PagePreview: React.FC = () => {
     const realMonth = totalOffset % 12;
     const realYear = startYear + Math.floor(totalOffset / 12);
   const grid = generateMonthGrid(realYear, realMonth);
+  const spanMap = showCommonHolidays ? collectHolidayMap(startMonth, startYear, months) : {};
+  const holidays: Record<string,string> = {};
+  Object.keys(spanMap).forEach(iso => { if (iso.startsWith(`${realYear}-${String(realMonth+1).padStart(2,'0')}-`)) holidays[iso] = spanMap[iso]; });
   const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   const monthLabel = `${monthNames[realMonth]} ${realYear}`;
     const weekDayLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  const columns = 7 + (showWeekNumbers ? 1 : 0);
+  const columns = 7;
   const cellW = (layout.grid.w * size.width) / columns;
   // Apply 1/4" top margin for 5x7 on the text (grid) side only
   const topMarginPx = pageSizeKey === '5x7' ? (0.25 * previewDpi) : 0;
@@ -147,13 +152,10 @@ export const PagePreview: React.FC = () => {
   <div key="month-label" className="absolute text-center text-[14px] font-semibold text-gray-900 dark:text-gray-100" style={{ left: headerLeft, top: top + 2, width: headerWidth }}>
         {monthLabel}
       </div>,
-   ...(showWeekNumbers ? [
-  <div key="wk" className="flex items-start justify-center text-[10px] font-medium text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-900"
-       style={{ position:'absolute', left: headerLeft, top, width: cellW, height: cellH, paddingTop: 22 }}>Wk</div>
-      ] : []),
+  ,
       ...weekDayLabels.map((d,i) => (
   <div key={d} className="flex items-start justify-center text-[10px] font-medium text-gray-700 dark:text-gray-200"
-       style={{ position:'absolute', left: headerLeft + (i + (showWeekNumbers?1:0))*cellW, top, width: cellW, height: cellH, paddingTop: 22 }}>{d}</div>
+       style={{ position:'absolute', left: headerLeft + i*cellW, top, width: cellW, height: cellH, paddingTop: 22 }}>{d}</div>
       ))
     ];
 
@@ -170,15 +172,9 @@ export const PagePreview: React.FC = () => {
     });
 
     const weeks = grid.weeks.map((week,wIdx) => {
-      const weekStart = week.find(c => c.inMonth && c.date)?.date || undefined;
-      const iso = weekStart ? isoWeekNumber(weekStart) : undefined;
       return [
-        ...(showWeekNumbers ? [
-          <div key={`wk-${wIdx}`} className={"absolute border border-gray-200 dark:border-gray-700 text-[10px] flex items-center justify-center bg-gray-50 dark:bg-gray-900"}
-               style={{ left, top: top + (wIdx+1)*cellH, width: cellW, height: cellH }}>{iso ?? ''}</div>
-        ] : []),
-        ...week.map((cell,dIdx) => {
-          const x = left + (dIdx + (showWeekNumbers?1:0)) * cellW;
+      ...week.map((cell,dIdx) => {
+        const x = left + dIdx * cellW;
           const y = top + (wIdx+1) * cellH;
           const items = cell.day ? (monthEvents[cell.day] || []) : [];
           const onDoubleClick: React.MouseEventHandler<HTMLDivElement> | undefined = (cell.inMonth && cell.day) ? () => {
@@ -194,12 +190,27 @@ export const PagePreview: React.FC = () => {
               openEventDialog(dateISO, null);
             }
           } : undefined;
+          const dateISO = cell.day ? `${realYear}-${String(realMonth+1).padStart(2,'0')}-${String(cell.day).padStart(2,'0')}` : '';
+          const isHoliday = !!holidays[dateISO];
           return (
-            <div onDoubleClick={onDoubleClick} key={wIdx+'-'+dIdx} className={"absolute border border-gray-200 dark:border-gray-700 text-[10px] p-0.5 space-y-0.5 " + (cell.inMonth ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900' : 'opacity-30')} style={{ left:x, top:y, width:cellW, height:cellH }}>
+            <div onDoubleClick={onDoubleClick} key={wIdx+'-'+dIdx} className={"absolute border border-gray-200 dark:border-gray-700 text-[10px] p-0.5 space-y-0.5 " + (cell.inMonth ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900' : 'opacity-30')} style={{ left:x, top:y, width:cellW, height:cellH, background: isHoliday ? 'rgba(255,235,200,0.9)' : undefined }} title={isHoliday ? holidays[dateISO] : undefined}>
               {cell.day && <div className="font-medium select-none">{cell.day}</div>}
-              {items.slice(0,2).map((it,idx) => (
-                <div key={idx} className="truncate" title={it.text} style={{ color: it.color || undefined }}>{it.text}</div>
-              ))}
+              {(() => {
+                // Show up to 2 events; each event text can wrap within its container.
+                const maxEvents = 2;
+                return items.slice(0, maxEvents).map((it, idx) => (
+                  <div
+                    key={idx}
+                    className="text-[9px] leading-tight"
+                    title={it.text}
+                    style={{
+                      color: it.color || undefined,
+                      wordBreak: 'break-word',
+                      overflow: 'hidden'
+                    }}
+                  >{it.text}</div>
+                ));
+              })()}
               {items.length > 2 && <div className="text-[9px] text-gray-500 dark:text-gray-400">+{items.length-2} more</div>}
             </div>
           );
@@ -208,7 +219,7 @@ export const PagePreview: React.FC = () => {
     });
 
   return { gridNode: <>{header}{weeks}</> };
-  }, [layout, size, monthIndex, startMonth, startYear, showWeekNumbers, allEvents, openEventDialog]);
+  }, [layout, size, monthIndex, startMonth, startYear, months, allEvents, openEventDialog, showCommonHolidays]);
 
   return (
     <div className="flex flex-col items-center gap-2">
@@ -216,11 +227,7 @@ export const PagePreview: React.FC = () => {
       <div className="relative bg-white dark:bg-gray-800 shadow-inner" style={{ width: size.width, height: size.height, fontFamily }}>
         {slotNodes}
         {gridNode}
-        {layout && monthPage.caption && (
-          <div className="absolute text-center text-[12px] text-gray-800 dark:text-gray-100 px-4" style={{ left: layout.grid.x * size.width, width: layout.grid.w * size.width, top: (layout.grid.y * size.height) - 22 }}>
-            {monthPage.caption}
-          </div>
-        )}
+  {/* Caption display removed */}
       </div>
   <div className="text-xs text-gray-500 dark:text-gray-400">Preview (not final resolution)</div>
     </div>

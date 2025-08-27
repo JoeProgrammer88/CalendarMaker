@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { computePagePixelSize } from '../../util/pageSize';
 import { useCalendarStore } from '../../store/store';
 import { SIZES, LAYOUTS } from '../../util/constants';
@@ -10,22 +11,18 @@ export const Sidebar: React.FC = () => {
   splitDirection: s.project.calendar.splitDirection,
   startMonth: s.project.calendar.startMonth,
   startYear: s.project.calendar.startYear,
-  showWeekNumbers: s.project.calendar.showWeekNumbers,
-  includeYearlyOverview: s.project.calendar.includeYearlyOverview ?? false,
   includeCoverPage: s.project.calendar.includeCoverPage ?? false,
+  showCommonHolidays: s.project.calendar.showCommonHolidays ?? false,
   coverStyle: s.project.calendar.coverStyle ?? 'large-photo',
   coverPhotoId: s.project.calendar.coverPhotoId,
   coverTransform: s.project.calendar.coverTransform,
-  showCommonHolidays: s.project.calendar.showCommonHolidays,
     monthIndex: s.ui.activeMonth,
     layout: s.project.calendar.layoutStylePerMonth[s.ui.activeMonth],
     setPageSize: s.actions.setPageSize,
   // setSplitDirection removed from UI; split handled automatically by page size
   setStartMonth: s.actions.setStartMonth,
   setStartYear: s.actions.setStartYear,
-  setShowWeekNumbers: s.actions.setShowWeekNumbers,
   setShowCommonHolidays: s.actions.setShowCommonHolidays,
-  setIncludeYearlyOverview: s.actions.setIncludeYearlyOverview,
   setIncludeCoverPage: s.actions.setIncludeCoverPage,
   setCoverStyle: s.actions.setCoverStyle,
   setCoverPhoto: s.actions.setCoverPhoto,
@@ -37,7 +34,6 @@ export const Sidebar: React.FC = () => {
   }));
   const coverPhotos = useCalendarStore(s => s.project.coverPhotos ?? []);
   const photos = useCalendarStore(s => s.project.photos);
-
   return (
   <aside className="w-64 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col text-sm text-gray-800 dark:text-gray-100 min-h-0 overflow-auto">
       <div className="p-3 font-semibold uppercase tracking-wide text-xs text-gray-600 dark:text-gray-300">Project</div>
@@ -61,20 +57,14 @@ export const Sidebar: React.FC = () => {
           </label>
         </div>
   {/* Split controls removed; split direction is derived from page size automatically. */}
-  <label className="inline-flex items-center gap-2 text-xs text-gray-800 dark:text-gray-100">
-          <input type="checkbox" checked={state.showWeekNumbers} onChange={e => state.setShowWeekNumbers(e.target.checked)} />
+        <label className="inline-flex items-center gap-2 text-xs text-gray-800 dark:text-gray-100">
+          <input type="checkbox" checked={state.showCommonHolidays} onChange={e => state.setShowCommonHolidays(e.target.checked)} />
           <span className="inline-flex items-center gap-1">
-            Show ISO week numbers
-            <InfoTooltip content="Adds an extra leftmost column with ISO week numbers (weeks start on Monday as per ISO 8601) to the monthly grid." />
+            Highlight common holidays
+            <InfoTooltip content="Highlights a few common fixed-date holidays (Jan 1, Jul 4, Dec 25) in the monthly grid." />
           </span>
         </label>
-  <label className="inline-flex items-center gap-2 text-xs text-gray-800 dark:text-gray-100">
-          <input type="checkbox" checked={state.includeYearlyOverview} onChange={e => state.setIncludeYearlyOverview(e.target.checked)} />
-          <span className="inline-flex items-center gap-1">
-            Include yearly overview
-            <InfoTooltip content="Adds a single-page overview with mini calendars for all months." />
-          </span>
-        </label>
+  
         <div className="space-y-1">
           <label className="inline-flex items-center gap-2 text-xs">
             <input type="checkbox" checked={state.includeCoverPage} onChange={e => state.setIncludeCoverPage(e.target.checked)} />
@@ -135,13 +125,7 @@ export const Sidebar: React.FC = () => {
             </label>
           )}
         </div>
-  <label className="inline-flex items-center gap-2 text-xs text-gray-800 dark:text-gray-100">
-          <input type="checkbox" checked={state.showCommonHolidays} onChange={e => state.setShowCommonHolidays(e.target.checked)} />
-          <span className="inline-flex items-center gap-1">
-            Show common holidays (overview)
-            <InfoTooltip content="Highlights a few common fixed-date holidays in the yearly overview (demo: Jan 1, Jul 4, Dec 25)." />
-          </span>
-        </label>
+  
         <label className="block text-gray-800 dark:text-gray-100">
           <span className="text-xs font-medium">Active Month</span>
           <select value={state.monthIndex} onChange={e => state.setActiveMonth(Number(e.target.value))} className="mt-1 w-full bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded px-2 py-1">
@@ -167,7 +151,6 @@ export const Sidebar: React.FC = () => {
             );
           })()}
         </label>
-  <button onClick={() => { if (confirm('Reset the project to defaults? This will clear photos and events.')) state.resetProject(); }} className="w-full text-xs bg-red-600 text-white rounded py-1 hover:bg-red-700">Reset Project</button>
       </div>
   <div className="p-3 font-semibold uppercase tracking-wide text-xs text-gray-600 dark:text-gray-300">Photos</div>
       <div className="px-3 pb-4 space-y-2">
@@ -236,34 +219,65 @@ const CoverPreview: React.FC<{ photoId: string }> = ({ photoId }) => {
   );
 };
 
-// Small inline tooltip with a “?” trigger. Keeps native title on parent for hover support.
+// Tooltip rendered via portal (fixed positioning) to avoid being clipped by sidebar overflow or overlapped by center panel.
 const InfoTooltip: React.FC<{ content: string }> = ({ content }) => {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement | null>(null);
+  const [pos, setPos] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+
+  const updatePosition = () => {
+    const el = triggerRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    setPos({ x: r.left, y: r.top, w: r.width, h: r.height });
+  };
+
+  useLayoutEffect(() => { if (open) updatePosition(); }, [open]);
   useEffect(() => {
     if (!open) return;
+    const onScrollOrResize = () => updatePosition();
+    window.addEventListener('scroll', onScrollOrResize, true);
+    window.addEventListener('resize', onScrollOrResize);
     const onDocClick = (e: MouseEvent) => {
-      if (!ref.current) return;
-      if (!ref.current.contains(e.target as Node)) setOpen(false);
+      if (triggerRef.current && !triggerRef.current.contains(e.target as Node)) {
+        // If click inside tooltip content (portal), allow (check by data attribute)
+        const target = e.target as HTMLElement;
+        if (!target.closest('[data-portal-tooltip]')) setOpen(false);
+      }
     };
     document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
+    return () => {
+      window.removeEventListener('scroll', onScrollOrResize, true);
+      window.removeEventListener('resize', onScrollOrResize);
+      document.removeEventListener('mousedown', onDocClick);
+    };
   }, [open]);
+
+  const tooltipNode = (open && pos) ? createPortal(
+    <div
+      data-portal-tooltip
+      className="fixed z-50 min-w-[16rem] max-w-[32rem] text-[11px] bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded shadow-lg p-2 whitespace-normal break-words"
+      style={{ top: pos.y + pos.h + 6, left: Math.min(pos.x, window.innerWidth - 320) }}
+      role="tooltip"
+    >
+      {content}
+    </div>,
+    document.body
+  ) : null;
+
   return (
-    <span className="relative inline-flex items-center" ref={ref as any}>
+    <span className="inline-flex items-center">
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen(o => !o)}
         className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
         aria-label="More info"
+        aria-expanded={open}
       >
         ?
       </button>
-      {open && (
-        <div className="absolute z-20 top-5 left-0 inline-block min-w-[20rem] max-w-[72rem] text-[11px] bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded shadow p-2 whitespace-normal break-words">
-          {content}
-        </div>
-      )}
+      {tooltipNode}
     </span>
   );
 };
