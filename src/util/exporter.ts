@@ -284,14 +284,20 @@ export async function exportAsPdf(project: ProjectState, onProgress?: (p: number
 
   // Calendar grid with days and events
   const g = layout.grid;
-  const gx = g.x * width;
+  const baseGx = g.x * width;
   // Apply 0.25 inch top margin for 5x7 page size on the text (grid) side only
   const topMarginPt = project.calendar.pageSize === '5x7' ? (0.25 * 72) : 0;
   // Position the grid so the entire grid (including the header) is shifted DOWN by the top margin on 5x7
   // Keep the bottom the same and reduce height so the top drops by topMarginPt
-  const gy = height - (g.y * height) - (g.h * height);
-  const gw = g.w * width;
-  const gh = (g.h * height) - topMarginPt;
+  const baseGy = height - (g.y * height) - (g.h * height);
+  const baseGw = g.w * width;
+  const baseGh = (g.h * height) - topMarginPt;
+  // Uniform safe inset (1/8" = 9pt) around the calendar grid to avoid printer edge cropping
+  const safeInset = 0.125 * 72; // 9pt
+  const gx = baseGx + safeInset;
+  const gy = baseGy + safeInset;
+  const gw = Math.max(10, baseGw - safeInset * 2);
+  const gh = Math.max(10, baseGh - safeInset * 2);
   // Compute header metrics first
   const columns = 7;
   const cellW = gw / columns;
@@ -299,8 +305,7 @@ export async function exportAsPdf(project: ProjectState, onProgress?: (p: number
   // Header background fill (draw BEFORE text so it doesn't cover the label)
   // Extend upward into the top margin for 5x7 so the gray covers the gap above the header, not week 1
   page.drawRectangle({ x: gx, y: gy + gh - cellH, width: gw, height: cellH + topMarginPt, color: rgb(0.96,0.96,0.96) });
-  // Shade the week-number header cell slightly differently (to match preview), if enabled
-  
+    
   // Month label inside grid header (bottom half)
   const labelSize = 16;
   const labelWidth = font.widthOfTextAtSize(monthLabel, labelSize);
@@ -310,7 +315,6 @@ export async function exportAsPdf(project: ProjectState, onProgress?: (p: number
   // Note: Do not draw an outer border across the full grid, to avoid vertical lines in the header area.
     const weekDayLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
     // Header labels
-    
     weekDayLabels.forEach((d, i) => {
       const cx = gx + i * cellW;
       // Add a bit more gap below the month label
