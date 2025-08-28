@@ -123,10 +123,10 @@ export async function exportAsPdf(project: ProjectState, onProgress?: (p: number
       // Use dedicated cover photo if set; otherwise fallback to any available
       const coverId = project.calendar.coverPhotoId;
         let anyPhoto = coverId
-          ? (project.coverPhotos?.find(p => p.id === coverId) || project.photos.find(p => p.id === coverId))
+          ? (project.coverPhotos.find(p => p.id === coverId) || project.photos.find(p => p.id === coverId))
           : undefined;
         if (!anyPhoto) {
-          anyPhoto = (project.coverPhotos?.find(p => !!p.previewUrl)) || project.photos.find(p => !!p.previewUrl);
+          anyPhoto = (project.coverPhotos.find(p => !!p.previewUrl)) || project.photos.find(p => !!p.previewUrl);
         }
       if (anyPhoto?.previewUrl) {
         const img = await loadImage(anyPhoto.previewUrl);

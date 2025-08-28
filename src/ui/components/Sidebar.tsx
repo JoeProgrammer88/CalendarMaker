@@ -32,7 +32,7 @@ export const Sidebar: React.FC = () => {
     setActiveMonth: s.actions.setActiveMonth,
   resetProject: s.actions.resetProject,
   }));
-  const coverPhotos = useCalendarStore(s => s.project.coverPhotos ?? []);
+  const coverPhotos = useCalendarStore(s => s.project.coverPhotos);
   const photos = useCalendarStore(s => s.project.photos);
   return (
   <aside className="w-64 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col text-sm text-gray-800 dark:text-gray-100 min-h-0 overflow-auto">
@@ -84,26 +84,24 @@ export const Sidebar: React.FC = () => {
                 <div className="mt-2 space-y-2">
                   <div className="text-xs font-medium">Cover Photo</div>
                   <div className="grid grid-cols-3 gap-2">
-                    {(coverPhotos.length > 0 ? coverPhotos : photos).map(p => (
+                    {coverPhotos.map(p => (
                       <button key={p.id} type="button" onClick={() => state.setCoverPhoto(p.id)} className={
                         'relative aspect-square rounded overflow-hidden border ' +
                         (state.coverPhotoId === p.id ? 'border-blue-600 ring-1 ring-blue-600' : 'border-gray-300 dark:border-gray-600')
                       }>
                         {p.previewUrl ? <img src={p.previewUrl} alt={p.name} className="object-cover w-full h-full" /> : <span className="text-[10px] p-1">{p.name}</span>}
-                        {coverPhotos.length > 0 && (
-                          <button
-                            type="button"
-                            title="Remove"
-                            onClick={(e) => { e.stopPropagation(); useCalendarStore.getState().actions.removeCoverPhoto(p.id); }}
-                            className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-600 text-white text-[10px] flex items-center justify-center shadow"
-                          >
-                            ×
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          title="Remove"
+                          onClick={(e) => { e.stopPropagation(); useCalendarStore.getState().actions.removeCoverPhoto(p.id); }}
+                          className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-600 text-white text-[10px] flex items-center justify-center shadow"
+                        >
+                          ×
+                        </button>
                       </button>
                     ))}
-                    {(coverPhotos.length === 0 && photos.length === 0) && (
-                      <div className="col-span-3 text-[11px] text-gray-500 dark:text-gray-400">No photos yet. Upload some below, or add cover‑specific photos.</div>
+                    {coverPhotos.length === 0 && (
+                      <div className="col-span-3 text-[11px] text-gray-500 dark:text-gray-400">No cover photos yet. Upload some below.</div>
                     )}
                   </div>
                   <label className="block text-xs font-medium cursor-pointer text-gray-800 dark:text-gray-100">
@@ -168,7 +166,7 @@ export const Sidebar: React.FC = () => {
 
 // Interactive cover preview with pan/zoom/rotate controls (normalized like month slots)
 const CoverPreview: React.FC<{ photoId: string }> = ({ photoId }) => {
-  const photo = useCalendarStore(s => (s.project.coverPhotos?.find(p => p.id === photoId)) || s.project.photos.find(p => p.id === photoId));
+  const photo = useCalendarStore(s => s.project.coverPhotos.find(p => p.id === photoId));
   const t = useCalendarStore(s => s.project.calendar.coverTransform || { scale:1, translateX:0, translateY:0, rotationDegrees:0 });
   const { pageSize, orientation } = useCalendarStore(s => ({ pageSize: s.project.calendar.pageSize, orientation: s.project.calendar.orientation }));
   const update = useCalendarStore(s => s.actions.updateCoverTransform);

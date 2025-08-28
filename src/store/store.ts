@@ -203,14 +203,14 @@ export const useCalendarStore = create<StoreShape>()(immer((set, get) => ({
         const previewUrl = URL.createObjectURL(f);
         return { id, originalBlobRef, previewBlobRef: '', name: f.name, assignedMonths: [], previewUrl };
       }));
-      set(s => { if (!s.project.coverPhotos) s.project.coverPhotos = []; s.project.coverPhotos.push(...newPhotos); });
+      set(s => { s.project.coverPhotos.push(...newPhotos); });
       get().actions.saveNow();
     },
     async removeCoverPhoto(photoId) {
-      const p = get().project.coverPhotos?.find(p => p.id === photoId);
+      const p = get().project.coverPhotos.find(p => p.id === photoId);
       set(s => {
         if (s.project.calendar.coverPhotoId === photoId) s.project.calendar.coverPhotoId = undefined;
-        if (s.project.coverPhotos) s.project.coverPhotos = s.project.coverPhotos.filter(pp => pp.id !== photoId);
+        s.project.coverPhotos = s.project.coverPhotos.filter(pp => pp.id !== photoId);
       });
       await deletePhotoBlob(p?.originalBlobRef);
       get().actions.saveNow();
