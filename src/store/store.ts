@@ -14,6 +14,7 @@ interface UIState {
   exporting: boolean;
   activeSlotId: string | null;
   eventDialog: { open: boolean; dateISO: string | null; editEventId: string | null };
+  photoPicker: { open: boolean; monthIndex: number | null; slotId: string | null };
   toasts: { id: string; text: string; type: 'info' | 'success' | 'error' }[];
   exportProgress: number; // 0..1
 }
@@ -59,6 +60,9 @@ interface Actions {
   clearAllData(): Promise<void>;
   syncHolidayEvents(): void;
   removeHolidayEvents(): void;
+  assignPhotoToSlot(photoId: string, monthIndex: number, slotId: string): void;
+  openPhotoPicker(monthIndex: number, slotId: string): void;
+  closePhotoPicker(): void;
 }
 interface StoreShape {
   project: ProjectState;
@@ -70,7 +74,7 @@ interface StoreShape {
 
 export const useCalendarStore = create<StoreShape>()(immer((set, get) => ({
   project: defaultProject(),
-  ui: { darkMode: false, activeMonth: 0, exporting: false, activeSlotId: 'main', eventDialog: { open: false, dateISO: null, editEventId: null }, toasts: [], exportProgress: 0 },
+  ui: { darkMode: false, activeMonth: 0, exporting: false, activeSlotId: 'main', eventDialog: { open: false, dateISO: null, editEventId: null }, photoPicker: { open: false, monthIndex: null, slotId: null }, toasts: [], exportProgress: 0 },
   actions: {
     toggleDarkMode() { set(s => { s.ui.darkMode = !s.ui.darkMode; }); },
   setPageSize(size) { set(s => { 
@@ -216,44 +220,22 @@ export const useCalendarStore = create<StoreShape>()(immer((set, get) => ({
       get().actions.saveNow();
     },
     assignPhotoToActiveSlot(photoId, slotId) { set(s => { const m = s.ui.activeMonth; const monthPage = s.project.monthData[m]; const targetSlotId = slotId || s.ui.activeSlotId || monthPage.slots[0]?.slotId; const slot = monthPage.slots.find((sl: MonthSlot) => sl.slotId === targetSlotId); if (slot) slot.photoId = photoId; }); get().actions.saveNow(); },
-  updateActiveSlotTransform(delta) { set(s => { const m = s.ui.activeMonth; const monthPage = s.project.monthData[m]; const slot = monthPage.slots.find((sl: MonthSlot) => sl.slotId === s.ui.activeSlotId) || monthPage.slots[0]; if (!slot) return; if (delta.scale !== undefined) slot.transform.scale = Math.min(5, Math.max(0.1, delta.scale)); if (delta.translateX !== undefined) slot.transform.translateX = delta.translateX; if (delta.translateY !== undefined) slot.transform.translateY = delta.translateY; if (delta.rotationDegrees !== undefined) slot.transform.rotationDegrees = ((delta.rotationDegrees % 360) + 360) % 360; });
-      if (!(window as any).__cm_save_debounced__) {
-        (window as any).__cm_save_debounced__ = debounce(() => get().actions.saveNow(), 800);
-      }
-      (window as any).__cm_save_debounced__();
-    },
-  resetActiveSlotTransform() { set(s => { const m = s.ui.activeMonth; const monthPage = s.project.monthData[m]; const slot = monthPage.slots.find((sl: MonthSlot) => sl.slotId === s.ui.activeSlotId); if (slot) { slot.transform = { scale:1, translateX:0, translateY:0, rotationDegrees:0 }; } }); },
-  addEvent(input) { set(s => { const id = crypto.randomUUID(); s.project.events.push({ id, dateISO: input.dateISO, text: input.text, color: input.color, visible: true }); }); get().actions.saveNow(); },
-  deleteEvent(id) { set(s => { s.project.events = s.project.events.filter(ev => ev.id !== id); }); },
-  toggleEventVisible(id) { set(s => { const ev = s.project.events.find(e => e.id === id); if (ev) ev.visible = !ev.visible; }); get().actions.saveNow(); },
-  updateEvent(id, input) { set(s => { const ev = s.project.events.find(e => e.id === id); if (!ev) return; if (input.text !== undefined) ev.text = input.text; if (input.color !== undefined) ev.color = input.color; if (input.dateISO !== undefined) ev.dateISO = input.dateISO; }); get().actions.saveNow(); },
-    addToast(text, type = 'info') {
-      const id = crypto.randomUUID();
-      set(s => { s.ui.toasts.push({ id, text, type }); });
-      setTimeout(() => { set(s => { s.ui.toasts = s.ui.toasts.filter(t => t.id !== id); }); }, 2500);
-    },
-  removeToast(id) { set(s => { s.ui.toasts = s.ui.toasts.filter(t => t.id !== id); }); },
-  setExportProgress(p) { set(s => { s.ui.exportProgress = p; }); },
-  async saveNow() { await saveProject(get().project); },
-  async loadLastProject() {
-      const lastId = getLastProjectId();
-      if (!lastId) return;
-      const loaded = await loadProjectById(lastId);
-      if (loaded) {
-        set(s => {
-          // Normalize orientation based on page size (5x7 => landscape, others => portrait)
-          if (loaded.calendar.pageSize === '5x7') {
-            loaded.calendar.orientation = 'landscape';
-            loaded.calendar.splitDirection = 'lr';
-          } else {
-            loaded.calendar.orientation = 'portrait';
-            loaded.calendar.splitDirection = 'tb';
-          }
-          s.project = loaded; s.ui.activeMonth = 0; s.ui.activeSlotId = 'main';
-        });
-        if (loaded.calendar.showCommonHolidays) get().actions.syncHolidayEvents();
-      }
-  },
+    updateActiveSlotTransform(delta) { set(s => {
+      const m = s.ui.activeMonth; const monthPage = s.project.monthData[m]; if (!monthPage) return; const slotId = s.ui.activeSlotId || monthPage.slots[0]?.slotId; if (!slotId) return; const slot = monthPage.slots.find(sl => sl.slotId === slotId); if (!slot) return; const t = slot.transform || { scale:1, translateX:0, translateY:0, rotationDegrees:0 }; if (delta.scale !== undefined) t.scale = Math.min(5, Math.max(0.1, delta.scale)); if (delta.translateX !== undefined) t.translateX = delta.translateX; if (delta.translateY !== undefined) t.translateY = delta.translateY; if (delta.rotationDegrees !== undefined) t.rotationDegrees = ((delta.rotationDegrees % 360) + 360) % 360; slot.transform = t; }); if (!(window as any).__cm_save_debounced__) { (window as any).__cm_save_debounced__ = debounce(() => get().actions.saveNow(), 800); } (window as any).__cm_save_debounced__(); },
+    resetActiveSlotTransform() { set(s => { const m = s.ui.activeMonth; const monthPage = s.project.monthData[m]; if (!monthPage) return; const slotId = s.ui.activeSlotId || monthPage.slots[0]?.slotId; if (!slotId) return; const slot = monthPage.slots.find(sl => sl.slotId === slotId); if (!slot) return; slot.transform = { scale:1, translateX:0, translateY:0, rotationDegrees:0 }; }); },
+    addEvent(input) { set(s => { s.project.events.push({ id: crypto.randomUUID(), dateISO: input.dateISO, text: input.text, color: input.color || '#1976d2', visible: true }); }); get().actions.saveNow(); },
+    deleteEvent(id) { set(s => { s.project.events = s.project.events.filter(ev => ev.id !== id); }); get().actions.saveNow(); },
+    toggleEventVisible(id) { set(s => { const ev = s.project.events.find(e => e.id === id); if (ev) ev.visible = !ev.visible; }); get().actions.saveNow(); },
+    updateEvent(id, input) { set(s => { const ev = s.project.events.find(e => e.id === id); if (ev) { if (input.text !== undefined) ev.text = input.text; if (input.color !== undefined) ev.color = input.color; if (input.dateISO !== undefined) ev.dateISO = input.dateISO; } }); get().actions.saveNow(); },
+    addToast(text, type='info') { const id = crypto.randomUUID(); set(s => { s.ui.toasts.push({ id, text, type }); }); setTimeout(() => { try { get().actions.removeToast(id); } catch {} }, 4000); },
+    removeToast(id) { set(s => { s.ui.toasts = s.ui.toasts.filter(t => t.id !== id); }); },
+    setExportProgress(p) { set(s => { s.ui.exportProgress = p; }); },
+    async saveNow() { try { await saveProject(get().project); } catch (e) { console.warn('Save failed', e); } },
+    async loadLastProject() { try { const id = await getLastProjectId(); if (!id) return; const proj = await loadProjectById(id); if (proj) { set(s => { s.project = proj; }); } } catch (e) { console.warn('Load failed', e); } },
+    assignPhotoToSlot(photoId, monthIndex, slotId) { set(s => { const monthPage = s.project.monthData[monthIndex]; const slot = monthPage.slots.find(sl => sl.slotId === slotId); if (slot) slot.photoId = photoId; }); get().actions.saveNow(); get().actions.closePhotoPicker(); },
+    openPhotoPicker(monthIndex, slotId) { set(s => { s.ui.photoPicker = { open: true, monthIndex, slotId }; }); },
+    closePhotoPicker() { set(s => { s.ui.photoPicker = { open: false, monthIndex: null, slotId: null }; }); },
+  // ...existing code...
   async clearAllData() { const id = get().project.id; await clearProject(id); set(s => { s.project = defaultProject(); s.ui.activeMonth = 0; s.ui.activeSlotId = 'main'; }); }
   ,
   syncHolidayEvents() {
