@@ -4,7 +4,7 @@ import { shallow } from 'zustand/shallow';
 import { defaultProject } from '../util/defaultProject';
 import type { ProjectState, CalendarPageSizeKey, LayoutId, MonthSlot, SplitDirection } from '../types';
 import { getLayoutById } from '../util/layouts';
-import { exportAsPdf, exportCurrentPageAsPng } from '../util/exporter';
+import { exportAsPdf, exportCurrentPageAsPng, exportAsPdfFoldable } from '../util/exporter';
 import { debounce, getLastProjectId, loadProjectById, savePhotoBlob, saveProject, clearProject, deletePhotoBlob } from '../util/persistence';
 import { collectHolidayMap } from '../util/holidays';
 
@@ -40,6 +40,7 @@ interface Actions {
   openEventDialog(dateISO: string, editEventId?: string | null): void;
   closeEventDialog(): void;
   exportProject(): Promise<void>;
+  exportProjectFoldable(): Promise<void>;
   exportCurrentMonthPng(): Promise<void>;
   addPhotos(files: FileList | File[]): Promise<void>;
   addCoverPhotos(files: FileList | File[]): Promise<void>;
@@ -179,6 +180,21 @@ export const useCalendarStore = create<StoreShape>()(immer((set, get) => ({
       } catch (e:any) {
         console.error('Export failed', e);
         get().actions.addToast('PDF export failed', 'error');
+      } finally {
+        set(s => { s.ui.exporting = false; s.ui.exportProgress = 0; });
+      }
+    },
+  async exportProjectFoldable() {
+      if (get().ui.exporting) return;
+      // Disable for 5x7 safeguard
+      if (get().project.calendar.pageSize === '5x7') { get().actions.addToast('Foldable export not available for 5x7', 'error'); return; }
+      set(s => { s.ui.exporting = true; s.ui.exportProgress = 0; });
+      try {
+        await exportAsPdfFoldable(get().project, (p: number) => { set(s => { s.ui.exportProgress = p; }); });
+        get().actions.addToast('Foldable PDF export complete', 'success');
+      } catch (e:any) {
+        console.error('Foldable export failed', e);
+        get().actions.addToast('Foldable export failed', 'error');
       } finally {
         set(s => { s.ui.exporting = false; s.ui.exportProgress = 0; });
       }
