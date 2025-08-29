@@ -34,11 +34,13 @@ async function tryFetchFontBytes(family: string): Promise<Uint8Array | undefined
   for (const file of files) {
     const url = `/fonts/${file}`;
     try {
-      const resp = await fetch(url);
-      if (resp.ok) {
-        const buf = await resp.arrayBuffer();
-        return new Uint8Array(buf);
-      }
+  // First do a HEAD to reduce noisy 404 body fetch warnings in some dev servers
+  const head = await fetch(url, { method: 'HEAD' });
+  if (!head.ok) continue;
+  const resp = await fetch(url);
+  if (!resp.ok) continue;
+  const buf = await resp.arrayBuffer();
+  return new Uint8Array(buf);
     } catch (_) {
       // ignore and try next
     }
@@ -123,10 +125,10 @@ export async function exportAsPdf(project: ProjectState, onProgress?: (p: number
       // Use dedicated cover photo if set; otherwise fallback to any available
       const coverId = project.calendar.coverPhotoId;
         let anyPhoto = coverId
-          ? (project.coverPhotos?.find(p => p.id === coverId) || project.photos.find(p => p.id === coverId))
+          ? (project.coverPhotos.find(p => p.id === coverId) || project.photos.find(p => p.id === coverId))
           : undefined;
         if (!anyPhoto) {
-          anyPhoto = (project.coverPhotos?.find(p => !!p.previewUrl)) || project.photos.find(p => !!p.previewUrl);
+          anyPhoto = (project.coverPhotos.find(p => !!p.previewUrl)) || project.photos.find(p => !!p.previewUrl);
         }
       if (anyPhoto?.previewUrl) {
         const img = await loadImage(anyPhoto.previewUrl);

@@ -7,7 +7,6 @@ export const RightPanel: React.FC = () => {
     fontFamily: s.project.calendar.fontFamily,
     setFontFamily: s.actions.setFontFamily
   }));
-  const exportPng = useCalendarStore(s => s.actions.exportCurrentMonthPng);
   const clearAll = useCalendarStore(s => s.actions.clearAllData);
   return (
     <aside className="w-72 border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col text-sm p-3 min-h-0 overflow-auto">
@@ -21,8 +20,7 @@ export const RightPanel: React.FC = () => {
   <div className="font-semibold uppercase tracking-wide text-xs text-gray-600 dark:text-gray-300 mb-2">Actions</div>
       <ExportButton />
       <div className="mt-2 grid grid-cols-2 gap-2">
-  {/* Undo/Redo removed */}
-        <button onClick={exportPng} className="col-span-2 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700">Export Current Page (PNG)</button>
+        {/* Remaining actions */}
         <button onClick={() => { if (confirm('Clear all saved data? This removes photos and the project.')) clearAll(); }} className="col-span-2 px-2 py-1 rounded border border-red-600 text-red-600 hover:bg-red-50">Clear All Data</button>
       </div>
     </aside>

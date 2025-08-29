@@ -7,7 +7,7 @@ import { generateMonthGrid } from '../../util/calendar';
 import { collectHolidayMap } from '../../util/holidays';
 
 export const PagePreview: React.FC = () => {
-  const { monthIndex, layoutId, pageSizeKey, orientation, splitDirection, photos, monthPage, activeSlotId, setActiveSlot, updateTransform, startMonth, startYear, months, fontFamily, allEvents, openEventDialog, showCommonHolidays } = useCalendarStore(s => ({
+  const { monthIndex, layoutId, pageSizeKey, orientation, splitDirection, photos, monthPage, activeSlotId, setActiveSlot, updateTransform, startMonth, startYear, months, fontFamily, allEvents, openEventDialog, showCommonHolidays, openPhotoPicker } = useCalendarStore(s => ({
     monthIndex: s.ui.activeMonth,
     layoutId: s.project.calendar.layoutStylePerMonth[s.ui.activeMonth],
     pageSizeKey: s.project.calendar.pageSize,
@@ -24,7 +24,8 @@ export const PagePreview: React.FC = () => {
     fontFamily: s.project.calendar.fontFamily,
   allEvents: s.project.events,
   openEventDialog: s.actions.openEventDialog,
-  showCommonHolidays: s.project.calendar.showCommonHolidays ?? false
+  showCommonHolidays: s.project.calendar.showCommonHolidays ?? false,
+  openPhotoPicker: s.actions.openPhotoPicker
   }));
   const layout = getEffectiveLayout(layoutId, splitDirection);
   const previewDpi = 100;
@@ -105,7 +106,7 @@ export const PagePreview: React.FC = () => {
       return (
         <div
           key={slot.slotId}
-          onClick={() => setActiveSlot(slot.slotId)}
+          onClick={() => { setActiveSlot(slot.slotId); if (!photo) { openPhotoPicker(monthIndex, slot.slotId); } }}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
@@ -235,21 +236,25 @@ export const PagePreview: React.FC = () => {
 };
 
 const TransformControls: React.FC<{ slotId: string }> = () => {
-  const { transform, update, reset } = useCalendarStore(s => {
+  const { transform, update, reset, openPhotoPicker, activeSlotId, monthIndex } = useCalendarStore(s => {
     const m = s.project.monthData[s.ui.activeMonth];
     const slot = m.slots.find(sl => sl.slotId === s.ui.activeSlotId) || m.slots[0];
     return {
       transform: slot?.transform ?? { scale:1, translateX:0, translateY:0, rotationDegrees:0 },
       update: s.actions.updateActiveSlotTransform,
-      reset: s.actions.resetActiveSlotTransform
+      reset: s.actions.resetActiveSlotTransform,
+      openPhotoPicker: s.actions.openPhotoPicker,
+      activeSlotId: s.ui.activeSlotId,
+      monthIndex: s.ui.activeMonth
     };
   });
   return (
     <div data-transform-controls className="absolute bottom-1 left-1 right-1 flex flex-wrap gap-1 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm p-1 rounded shadow text-[10px] text-gray-800 dark:text-gray-200">
-  <button onClick={() => update({ scale: transform.scale * 1.1 })} className="px-1 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">Zoom +</button>
-  <button onClick={() => update({ scale: transform.scale / 1.1 })} className="px-1 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">Zoom -</button>
+      <button onClick={() => update({ scale: transform.scale * 1.1 })} className="px-1 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">Zoom +</button>
+      <button onClick={() => update({ scale: transform.scale / 1.1 })} className="px-1 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">Zoom -</button>
       <button onClick={() => update({ rotationDegrees: transform.rotationDegrees + 90 })} className="px-1 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">Rotate</button>
       <button onClick={() => reset()} className="px-1 py-0.5 bg-red-500 text-white rounded">Reset</button>
+      <button onClick={() => { if (activeSlotId != null) openPhotoPicker(monthIndex, activeSlotId); }} className="px-1 py-0.5 bg-blue-500 text-white rounded">Change</button>
     </div>
   );
 };
