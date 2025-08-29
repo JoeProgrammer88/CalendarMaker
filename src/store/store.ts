@@ -15,6 +15,7 @@ interface UIState {
   activeSlotId: string | null;
   eventDialog: { open: boolean; dateISO: string | null; editEventId: string | null };
   photoPicker: { open: boolean; monthIndex: number | null; slotId: string | null };
+  coverPicker?: { open: boolean; target: 'front' | 'rear' | null };
   toasts: { id: string; text: string; type: 'info' | 'success' | 'error' }[];
   exportProgress: number; // 0..1
 }
@@ -30,8 +31,14 @@ interface Actions {
   setIncludeCoverPage(v: boolean): void;
   setCoverStyle(style: 'large-photo' | 'grid-4x3'): void;
   setCoverPhoto(photoId: string | null): void;
+  setFrontCoverPhoto(photoId: string | null): void;
+  setRearCoverPhoto(photoId: string | null): void;
   updateCoverTransform(delta: Partial<{ scale: number; translateX: number; translateY: number; rotationDegrees: number }>): void;
   resetCoverTransform(): void;
+  updateFrontCoverTransform(delta: Partial<{ scale: number; translateX: number; translateY: number; rotationDegrees: number }>): void;
+  resetFrontCoverTransform(): void;
+  updateRearCoverTransform(delta: Partial<{ scale: number; translateX: number; translateY: number; rotationDegrees: number }>): void;
+  resetRearCoverTransform(): void;
   resetProject(): void;
   setLayoutForMonth(monthIndex: number, layoutId: LayoutId): void;
   setActiveMonth(idx: number): void;
@@ -64,6 +71,8 @@ interface Actions {
   assignPhotoToSlot(photoId: string, monthIndex: number, slotId: string): void;
   openPhotoPicker(monthIndex: number, slotId: string): void;
   closePhotoPicker(): void;
+  openCoverPicker(target: 'front' | 'rear'): void;
+  closeCoverPicker(): void;
 }
 interface StoreShape {
   project: ProjectState;
@@ -75,7 +84,7 @@ interface StoreShape {
 
 export const useCalendarStore = create<StoreShape>()(immer((set, get) => ({
   project: defaultProject(),
-  ui: { darkMode: false, activeMonth: 0, exporting: false, activeSlotId: 'main', eventDialog: { open: false, dateISO: null, editEventId: null }, photoPicker: { open: false, monthIndex: null, slotId: null }, toasts: [], exportProgress: 0 },
+  ui: { darkMode: false, activeMonth: 0, exporting: false, activeSlotId: 'main', eventDialog: { open: false, dateISO: null, editEventId: null }, photoPicker: { open: false, monthIndex: null, slotId: null }, coverPicker: { open: false, target: null }, toasts: [], exportProgress: 0 },
   actions: {
     toggleDarkMode() { set(s => { s.ui.darkMode = !s.ui.darkMode; }); },
   setPageSize(size) { set(s => { 
@@ -114,6 +123,8 @@ export const useCalendarStore = create<StoreShape>()(immer((set, get) => ({
   setIncludeCoverPage(v) { set(s => { s.project.calendar.includeCoverPage = v; }); },
   setCoverStyle(style) { set(s => { s.project.calendar.coverStyle = style; }); },
   setCoverPhoto(photoId) { set(s => { s.project.calendar.coverPhotoId = photoId || undefined; }); get().actions.saveNow(); },
+  setFrontCoverPhoto(photoId) { set(s => { s.project.calendar.frontCoverPhotoId = photoId || undefined; }); get().actions.saveNow(); },
+  setRearCoverPhoto(photoId) { set(s => { s.project.calendar.rearCoverPhotoId = photoId || undefined; }); get().actions.saveNow(); },
   updateCoverTransform(delta) { set(s => {
       const t = s.project.calendar.coverTransform || { scale:1, translateX:0, translateY:0, rotationDegrees:0 };
       if (delta.scale !== undefined) t.scale = Math.min(5, Math.max(0.1, delta.scale));
@@ -128,6 +139,24 @@ export const useCalendarStore = create<StoreShape>()(immer((set, get) => ({
     (window as any).__cm_save_debounced__();
   },
   resetCoverTransform() { set(s => { s.project.calendar.coverTransform = { scale:1, translateX:0, translateY:0, rotationDegrees:0 }; }); },
+  updateFrontCoverTransform(delta) { set(s => {
+      const t = s.project.calendar.frontCoverTransform || { scale:1, translateX:0, translateY:0, rotationDegrees:0 };
+      if (delta.scale !== undefined) t.scale = Math.min(5, Math.max(0.1, delta.scale));
+      if (delta.translateX !== undefined) t.translateX = delta.translateX;
+      if (delta.translateY !== undefined) t.translateY = delta.translateY;
+      if (delta.rotationDegrees !== undefined) t.rotationDegrees = ((delta.rotationDegrees % 360) + 360) % 360;
+      s.project.calendar.frontCoverTransform = t;
+    }); if (!(window as any).__cm_save_debounced__) { (window as any).__cm_save_debounced__ = debounce(() => get().actions.saveNow(), 800); } (window as any).__cm_save_debounced__(); },
+  resetFrontCoverTransform() { set(s => { s.project.calendar.frontCoverTransform = { scale:1, translateX:0, translateY:0, rotationDegrees:0 }; }); },
+  updateRearCoverTransform(delta) { set(s => {
+      const t = s.project.calendar.rearCoverTransform || { scale:1, translateX:0, translateY:0, rotationDegrees:0 };
+      if (delta.scale !== undefined) t.scale = Math.min(5, Math.max(0.1, delta.scale));
+      if (delta.translateX !== undefined) t.translateX = delta.translateX;
+      if (delta.translateY !== undefined) t.translateY = delta.translateY;
+      if (delta.rotationDegrees !== undefined) t.rotationDegrees = ((delta.rotationDegrees % 360) + 360) % 360;
+      s.project.calendar.rearCoverTransform = t;
+    }); if (!(window as any).__cm_save_debounced__) { (window as any).__cm_save_debounced__ = debounce(() => get().actions.saveNow(), 800); } (window as any).__cm_save_debounced__(); },
+  resetRearCoverTransform() { set(s => { s.project.calendar.rearCoverTransform = { scale:1, translateX:0, translateY:0, rotationDegrees:0 }; }); },
   resetProject() { set(s => { s.project = defaultProject(); s.ui.activeMonth = 0; s.ui.activeSlotId = 'main'; }); get().actions.saveNow(); },
   // Ensure month slots match layout definition (preserve existing where possible)
   setLayoutForMonth(monthIndex, layoutId) { set(s => {
@@ -263,6 +292,8 @@ export const useCalendarStore = create<StoreShape>()(immer((set, get) => ({
     assignPhotoToSlot(photoId, monthIndex, slotId) { set(s => { const monthPage = s.project.monthData[monthIndex]; const slot = monthPage.slots.find(sl => sl.slotId === slotId); if (slot) slot.photoId = photoId; }); get().actions.saveNow(); get().actions.closePhotoPicker(); },
     openPhotoPicker(monthIndex, slotId) { set(s => { s.ui.photoPicker = { open: true, monthIndex, slotId }; }); },
     closePhotoPicker() { set(s => { s.ui.photoPicker = { open: false, monthIndex: null, slotId: null }; }); },
+  openCoverPicker(target) { set(s => { s.ui.coverPicker = { open: true, target }; }); },
+  closeCoverPicker() { set(s => { s.ui.coverPicker = { open: false, target: null }; }); },
   // ...existing code...
   async clearAllData() { const id = get().project.id; await clearProject(id); set(s => { s.project = defaultProject(); s.ui.activeMonth = 0; s.ui.activeSlotId = 'main'; }); }
   ,

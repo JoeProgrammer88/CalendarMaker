@@ -5,7 +5,7 @@ import { RightPanel } from './components/RightPanel';
 import { useCalendarStore } from '../store/store';
 import { EventModal } from './components/EventModal';
 import { ToastHost } from './components/ToastHost';
-import { PhotoPickerModal } from './components/PhotoPickerModal';
+import { PhotoPickerModal, CoverPhotoPickerModal } from './components/PhotoPickerModal';
 
 export const App: React.FC = () => {
   const dark = useCalendarStore(s => s.ui.darkMode);
@@ -50,6 +50,7 @@ export const App: React.FC = () => {
   <EventModal />
   <ToastHost />
   <PhotoPickerModal />
+  <CoverPhotoPickerModal />
     </div>
   );
 };

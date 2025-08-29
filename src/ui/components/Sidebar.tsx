@@ -15,6 +15,10 @@ export const Sidebar: React.FC = () => {
   showCommonHolidays: s.project.calendar.showCommonHolidays ?? false,
   coverStyle: s.project.calendar.coverStyle ?? 'large-photo',
   coverPhotoId: s.project.calendar.coverPhotoId,
+  frontCoverPhotoId: s.project.calendar.frontCoverPhotoId,
+  rearCoverPhotoId: s.project.calendar.rearCoverPhotoId,
+  frontCoverTransform: s.project.calendar.frontCoverTransform,
+  rearCoverTransform: s.project.calendar.rearCoverTransform,
   coverTransform: s.project.calendar.coverTransform,
     monthIndex: s.ui.activeMonth,
     layout: s.project.calendar.layoutStylePerMonth[s.ui.activeMonth],
@@ -26,8 +30,14 @@ export const Sidebar: React.FC = () => {
   setIncludeCoverPage: s.actions.setIncludeCoverPage,
   setCoverStyle: s.actions.setCoverStyle,
   setCoverPhoto: s.actions.setCoverPhoto,
+  setFrontCoverPhoto: s.actions.setFrontCoverPhoto,
+  setRearCoverPhoto: s.actions.setRearCoverPhoto,
   updateCoverTransform: s.actions.updateCoverTransform,
   resetCoverTransform: s.actions.resetCoverTransform,
+  updateFrontCoverTransform: s.actions.updateFrontCoverTransform,
+  resetFrontCoverTransform: s.actions.resetFrontCoverTransform,
+  updateRearCoverTransform: s.actions.updateRearCoverTransform,
+  resetRearCoverTransform: s.actions.resetRearCoverTransform,
     setLayoutForMonth: s.actions.setLayoutForMonth,
     setActiveMonth: s.actions.setActiveMonth,
   resetProject: s.actions.resetProject,
@@ -80,7 +90,7 @@ export const Sidebar: React.FC = () => {
                 <option value="large-photo">Large Photo (90%)</option>
                 <option value="grid-4x3">4×3 Month Grid</option>
               </select>
-        {state.coverStyle === 'large-photo' && (
+  {state.coverStyle === 'large-photo' && (
                 <div className="mt-2 space-y-2">
                   <div className="text-xs font-medium">Cover Photo</div>
                   <div className="grid grid-cols-3 gap-2">
@@ -109,10 +119,17 @@ export const Sidebar: React.FC = () => {
                     <input type="file" accept="image/*" multiple className="hidden" onChange={e => { if (e.target.files) useCalendarStore.getState().actions.addCoverPhotos(e.target.files); e.target.value=''; }} />
                     <div className="border border-dashed border-gray-400 dark:border-gray-600 rounded p-2 text-center text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-900">Click to choose</div>
                   </label>
-          {state.coverPhotoId && (
+          {(state.coverPhotoId || state.frontCoverPhotoId || state.rearCoverPhotoId) && (
                     <div>
-                      <div className="text-[11px] mb-1 text-gray-600 dark:text-gray-300">Selected cover preview</div>
-            <CoverPreview photoId={state.coverPhotoId} />
+                      <div className="text-[11px] mb-1 text-gray-600 dark:text-gray-300">Selected legacy single cover preview</div>
+            {state.coverPhotoId && <CoverPreview photoId={state.coverPhotoId} />}
+            <div className="mt-3 space-y-2">
+              <div className="text-[11px] font-medium">Foldable Front / Rear Cover (optional)</div>
+              <div className="space-y-3">
+                <FoldableCoverInteractive which="front" label="Front (inverted)" />
+                <FoldableCoverInteractive which="rear" label="Rear" />
+              </div>
+            </div>
                       <div className="mt-2">
                         <button type="button" onClick={() => state.setCoverPhoto(null)} className="text-xs text-red-600 hover:underline">Clear cover photo</button>
                       </div>
@@ -337,6 +354,75 @@ const PhotoList: React.FC = () => {
         </button>
       ))}
   {photos.length === 0 && <div className="col-span-3 text-[11px] text-gray-500 dark:text-gray-400">No photos yet.</div>}
+    </div>
+  );
+};
+
+
+// Interactive preview + controls (drag/pan/zoom/rotate) for front/rear foldable cover halves
+const FoldableCoverInteractive: React.FC<{ which: 'front' | 'rear'; label: string }> = ({ which, label }) => {
+  const { pageSize, orientation } = useCalendarStore(s => ({ pageSize: s.project.calendar.pageSize, orientation: s.project.calendar.orientation }));
+  const photoId = useCalendarStore(s => which === 'front' ? s.project.calendar.frontCoverPhotoId : s.project.calendar.rearCoverPhotoId);
+  const photo = useCalendarStore(s => s.project.coverPhotos.find(p => p.id === photoId) || s.project.photos.find(p => p.id === photoId));
+  const t = useCalendarStore(s => which === 'front' ? (s.project.calendar.frontCoverTransform || { scale:1, translateX:0, translateY:0, rotationDegrees:0 }) : (s.project.calendar.rearCoverTransform || { scale:1, translateX:0, translateY:0, rotationDegrees:0 }));
+  const update = useCalendarStore(s => which === 'front' ? s.actions.updateFrontCoverTransform : s.actions.updateRearCoverTransform);
+  const reset = useCalendarStore(s => which === 'front' ? s.actions.resetFrontCoverTransform : s.actions.resetRearCoverTransform);
+  const openPicker = () => useCalendarStore.getState().actions.openCoverPicker(which);
+  const dragRef = React.useRef<{ active:boolean; startX:number; startY:number; startTX:number; startTY:number; lockScrollX:number; lockScrollY:number }|null>(null);
+  const onPointerDown: React.PointerEventHandler<HTMLDivElement> = e => {
+    e.preventDefault(); // suppress native behaviors immediately
+    if (!photo) { openPicker(); return; }
+    const target = e.target as HTMLElement;
+    if (target.closest('[data-controls]')) return;
+    try { (e.currentTarget as any).setPointerCapture?.(e.pointerId); } catch {}
+    dragRef.current = { active:true, startX:e.clientX, startY:e.clientY, startTX:t.translateX||0, startTY:t.translateY||0, lockScrollX: window.scrollX, lockScrollY: window.scrollY };
+    // Lock body scroll (desktop + mobile) while dragging
+    document.documentElement.style.scrollBehavior = 'auto';
+    document.body.style.overscrollBehavior = 'contain';
+    document.body.style.touchAction = 'none';
+    document.body.style.userSelect = 'none';
+  };
+  const onPointerMove: React.PointerEventHandler<HTMLDivElement> = e => {
+    const d = dragRef.current; if (!d?.active) return;
+    e.preventDefault(); // prevent scroll / text selection
+    // Restore scroll position if browser attempted to move it
+    window.scrollTo(d.lockScrollX, d.lockScrollY);
+    const rect = e.currentTarget.getBoundingClientRect();
+    update({ translateX: d.startTX + (e.clientX - d.startX)/rect.width, translateY: d.startTY + (e.clientY - d.startY)/rect.height });
+  };
+  const end = () => {
+    if (dragRef.current) dragRef.current.active = false;
+    // Restore body styles
+    document.body.style.overscrollBehavior = '';
+    document.body.style.touchAction = '';
+    document.body.style.userSelect = '';
+  };
+  const onWheel: React.WheelEventHandler<HTMLDivElement> = e => { e.preventDefault(); const factor = e.deltaY < 0 ? 1.1 : 1/1.1; update({ scale: (t.scale||1)*factor }); };
+  const tx = (t.translateX||0)*100; const ty = (t.translateY||0)*100;
+  const style: React.CSSProperties = { transform:`translate(-50%, -50%) translate(${tx}%, ${ty}%) scale(${t.scale||1}) rotate(${t.rotationDegrees||0}deg)`, transformOrigin:'center center' };
+  // Use same page aspect ratio as standard cover preview for consistency
+  const px = computePagePixelSize(pageSize, orientation, 100);
+  return (
+  <div className="relative w-full rounded border border-gray-300 dark:border-gray-600 bg-gray-200 dark:bg-gray-700 overflow-hidden text-[10px] select-none" style={{ aspectRatio: `${px.width} / ${px.height}`, touchAction: 'none', overscrollBehavior: 'contain' }} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={end} onPointerCancel={end} onDoubleClick={openPicker} onWheel={onWheel}>
+      {!photo && (
+        <button type="button" onClick={openPicker} className="absolute inset-0 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-gray-300/30">
+          {label}\nClick to choose
+        </button>
+      )}
+      {photo?.previewUrl && (
+        <>
+          <img src={photo.previewUrl} alt={label} className="absolute left-1/2 top-1/2 w-[130%] h-[130%] object-cover" style={style} draggable={false} />
+          <div className="absolute bottom-1 left-1 right-1 flex flex-wrap gap-1 justify-start bg-white/80 dark:bg-gray-900/80 backdrop-blur px-1 py-0.5 rounded text-[9px]" data-controls>
+            <span className="font-semibold mr-1">{label}</span>
+            <button onClick={() => update({ scale:(t.scale||1)*1.1 })} className="px-1 py-0.5 bg-gray-300 dark:bg-gray-600 rounded">+</button>
+            <button onClick={() => update({ scale:(t.scale||1)/1.1 })} className="px-1 py-0.5 bg-gray-300 dark:bg-gray-600 rounded">-</button>
+            <button onClick={() => update({ rotationDegrees:(t.rotationDegrees||0)+90 })} className="px-1 py-0.5 bg-gray-300 dark:bg-gray-600 rounded">⟳</button>
+            <button onClick={() => update({ translateX:0, translateY:0 })} className="px-1 py-0.5 bg-gray-300 dark:bg-gray-600 rounded">Center</button>
+            <button onClick={() => reset()} className="px-1 py-0.5 bg-red-500 text-white rounded">Reset</button>
+            <button onClick={openPicker} className="px-1 py-0.5 bg-blue-600 text-white rounded">Change</button>
+          </div>
+        </>
+      )}
     </div>
   );
 };

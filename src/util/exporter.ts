@@ -656,14 +656,40 @@ export async function exportAsPdfFoldable(project: ProjectState, onProgress?: (p
     pageCounter++; if (onProgress) onProgress(pageCounter / totalPages);
   }
   if (hasCover) {
-    // Reuse existing cover export simplified: just a blank cover with label for now
+    // Cover page: top half = front cover (printed upside down), bottom half = rear cover (normal orientation)
     const { pageSize, orientation } = project.calendar;
     const pt = computePagePixelSize(pageSize, orientation, 72);
     const cover = pdf.addPage([pt.width, pt.height]);
     const { width, height } = cover.getSize();
-    const label = 'Cover';
-    const size = 32; const textW = font.widthOfTextAtSize(label, size);
-    cover.drawText(label, { x: (width - textW)/2, y: height/2 - size/2, size, font, color: rgb(0,0,0) });
+    const halfH = height / 2;
+    // Retrieve chosen photos: prefer explicit front/rear, fallback to legacy coverPhotoId for front.
+    const frontId = project.calendar.frontCoverPhotoId || project.calendar.coverPhotoId;
+    const rearId = project.calendar.rearCoverPhotoId;
+    const frontPhoto = frontId ? (project.coverPhotos.find(p => p.id === frontId) || project.photos.find(p => p.id === frontId)) : undefined;
+    const rearPhoto = rearId ? (project.coverPhotos.find(p => p.id === rearId) || project.photos.find(p => p.id === rearId)) : undefined;
+    // Helper to draw a photo scaled cover-fit into area with transform (pan/zoom/rotate)
+    const drawPhoto = async (photo: any, transform: any, x: number, y: number, w: number, h: number, rotate180?: boolean) => {
+      if (!photo?.previewUrl) { cover.drawRectangle({ x, y, width: w, height: h, borderColor: rgb(0.6,0.6,0.6), borderWidth: 1 }); return; }
+      const img = await loadImage(photo.previewUrl);
+      const canvas = document.createElement('canvas');
+      const scaleFactor = 300/72; canvas.width = Math.max(1, Math.round(w * scaleFactor)); canvas.height = Math.max(1, Math.round(h * scaleFactor));
+      const ctx = canvas.getContext('2d')!; ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+      const t = transform || { scale:1, translateX:0, translateY:0, rotationDegrees:0 };
+      const baseScale = Math.max(canvas.width / img.width, canvas.height / img.height);
+      const s = baseScale * (t.scale || 1);
+      const tx = (t.translateX || 0) * canvas.width;
+      const ty = (t.translateY || 0) * canvas.height;
+      const rad = (t.rotationDegrees || 0) * Math.PI/180;
+      ctx.save(); ctx.translate(canvas.width/2 + tx, canvas.height/2 + ty); if (rad) ctx.rotate(rad); ctx.scale(s, s); ctx.drawImage(img, -img.width/2, -img.height/2); ctx.restore();
+      const png = await canvasToPngBytes(canvas); const embedded = await pdf.embedPng(png);
+      if (rotate180) {
+        cover.drawImage(embedded, { x, y: y + h, width: w, height: -h });
+      } else {
+        cover.drawImage(embedded, { x, y, width: w, height: h });
+      }
+    };
+    await drawPhoto(frontPhoto, project.calendar.frontCoverTransform, 0, halfH, width, halfH, true); // top half (inverted)
+    await drawPhoto(rearPhoto, project.calendar.rearCoverTransform, 0, 0, width, halfH, false); // bottom half (normal)
     pageCounter++; if (onProgress) onProgress(pageCounter / totalPages);
   }
   const bytes = await pdf.save();
