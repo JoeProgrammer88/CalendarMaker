@@ -120,13 +120,11 @@ export const Sidebar: React.FC = () => {
                     <input type="file" accept="image/*" multiple className="hidden" onChange={e => { if (e.target.files) useCalendarStore.getState().actions.addCoverPhotos(e.target.files); e.target.value=''; }} />
                     <div className="border border-dashed border-gray-400 dark:border-gray-600 rounded p-2 text-center text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-900">Click to choose</div>
                   </label>
-          {(state.coverPhotoId || state.frontCoverPhotoId || state.rearCoverPhotoId) && (
-            <div className="space-y-4">
+          <div className="space-y-4">
               <CoverPhotoUnifiedPreview which="legacy" label="Legacy Cover" />
               <CoverPhotoUnifiedPreview which="front" label="Front (inverted)" />
               <CoverPhotoUnifiedPreview which="rear" label="Rear" />
             </div>
-          )}
                 </div>
               )}
             </label>
@@ -172,6 +170,9 @@ export const Sidebar: React.FC = () => {
     </aside>
   );
 };
+
+// Provide a default export too (some bundlers / HMR edge cases were not seeing the named export)
+export default Sidebar;
 
 // Interactive cover preview with pan/zoom/rotate controls (normalized like month slots)
 const CoverPreview: React.FC<{ photoId: string }> = ({ photoId }) => {

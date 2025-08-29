@@ -15,7 +15,7 @@ interface UIState {
   activeSlotId: string | null;
   eventDialog: { open: boolean; dateISO: string | null; editEventId: string | null };
   photoPicker: { open: boolean; monthIndex: number | null; slotId: string | null };
-  coverPicker?: { open: boolean; target: 'front' | 'rear' | null };
+  coverPicker?: { open: boolean; target: 'front' | 'rear' | 'legacy' | null };
   toasts: { id: string; text: string; type: 'info' | 'success' | 'error' }[];
   exportProgress: number; // 0..1
 }
@@ -71,7 +71,7 @@ interface Actions {
   assignPhotoToSlot(photoId: string, monthIndex: number, slotId: string): void;
   openPhotoPicker(monthIndex: number, slotId: string): void;
   closePhotoPicker(): void;
-  openCoverPicker(target: 'front' | 'rear'): void;
+  openCoverPicker(target: 'front' | 'rear' | 'legacy'): void;
   closeCoverPicker(): void;
 }
 interface StoreShape {

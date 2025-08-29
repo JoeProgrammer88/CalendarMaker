@@ -36,7 +36,7 @@ export const CoverPhotoUnifiedPreview: React.FC<UnifiedCoverPreviewProps> = ({ w
   const allPhotos = useCalendarStore(s => s.project.photos);
   const photo = coverPhotos.find(p => p.id === photoId) || allPhotos.find(p => p.id === photoId);
   const px = computePagePixelSize(pageSize, orientation, 100);
-  const dragRef = useRef<{ active:boolean; startX:number; startY:number; startTX:number; startTY:number }|null>(null);
+  const dragRef = useRef<{ active:boolean; startX:number; startY:number; startTX:number; startTY:number; lockScrollX:number; lockScrollY:number }|null>(null);
   const update = (delta: Partial<{ scale:number; translateX:number; translateY:number; rotationDegrees:number }>) => {
     if (which === 'legacy') updateLegacy(delta);
     else if (which === 'front') updateFront(delta);
@@ -44,23 +44,35 @@ export const CoverPhotoUnifiedPreview: React.FC<UnifiedCoverPreviewProps> = ({ w
   };
   const reset = () => { if (which === 'legacy') resetLegacy(); else if (which === 'front') resetFront(); else resetRear(); };
   const clear = () => { if (which === 'legacy') setLegacy(null); else if (which === 'front') setFront(null); else setRear(null); };
-  const openSelect = () => { if (which === 'legacy') { /* reuse legacy adding process: open picker for front, fallback */ openPicker('front'); } else openPicker(which as 'front' | 'rear'); };
+  const openSelect = () => { if (which === 'legacy') openPicker('legacy'); else openPicker(which as 'front' | 'rear'); };
   const onPointerDown: React.PointerEventHandler<HTMLDivElement> = e => {
     if (!photo) { openSelect(); return; }
     const target = e.target as HTMLElement; if (target.closest('[data-controls]')) return;
     try { (e.currentTarget as any).setPointerCapture?.(e.pointerId); } catch {}
-    dragRef.current = { active:true, startX:e.clientX, startY:e.clientY, startTX: transform.translateX||0, startTY: transform.translateY||0 };
+    dragRef.current = { active:true, startX:e.clientX, startY:e.clientY, startTX: transform.translateX||0, startTY: transform.translateY||0, lockScrollX: window.scrollX, lockScrollY: window.scrollY };
+    // Lock scroll to prevent page jumping (especially first drag after photo change)
+    document.body.style.overscrollBehavior = 'contain';
+    document.body.style.touchAction = 'none';
+    document.body.style.userSelect = 'none';
     e.preventDefault();
   };
   const onPointerMove: React.PointerEventHandler<HTMLDivElement> = e => {
     const d = dragRef.current; if (!d?.active) return; e.preventDefault();
+    // Keep window at locked scroll position to avoid unintended scroll-to-top
+    window.scrollTo(d.lockScrollX, d.lockScrollY);
     const rect = e.currentTarget.getBoundingClientRect();
     const nx = d.startTX + (e.clientX - d.startX)/rect.width;
     const ny = d.startTY + (e.clientY - d.startY)/rect.height;
     update({ translateX: nx, translateY: ny });
   };
-  const end = () => { if (dragRef.current) dragRef.current.active = false; };
-  const onWheel: React.WheelEventHandler<HTMLDivElement> = e => { e.preventDefault(); const factor = e.deltaY < 0 ? 1.1 : 1/1.1; update({ scale: (transform.scale||1)*factor }); };
+  const end = () => {
+    if (dragRef.current) dragRef.current.active = false;
+    document.body.style.overscrollBehavior = '';
+    document.body.style.touchAction = '';
+    document.body.style.userSelect = '';
+  };
+  // Wheel zoom disabled per request (keep handler to prevent page scroll while over image)
+  const onWheel: React.WheelEventHandler<HTMLDivElement> = e => { e.preventDefault(); };
   const tx = (transform.translateX||0)*100; const ty = (transform.translateY||0)*100;
   const style: React.CSSProperties = { transform:`translate(-50%, -50%) translate(${tx}%, ${ty}%) scale(${transform.scale||1}) rotate(${transform.rotationDegrees||0}deg)`, transformOrigin:'center center' };
   return (
@@ -77,7 +89,6 @@ export const CoverPhotoUnifiedPreview: React.FC<UnifiedCoverPreviewProps> = ({ w
             <button onClick={() => update({ scale:(transform.scale||1)*1.1 })} className="px-1 py-0.5 bg-gray-300 dark:bg-gray-600 rounded">+</button>
             <button onClick={() => update({ scale:(transform.scale||1)/1.1 })} className="px-1 py-0.5 bg-gray-300 dark:bg-gray-600 rounded">-</button>
             <button onClick={() => update({ rotationDegrees:(transform.rotationDegrees||0)+90 })} className="px-1 py-0.5 bg-gray-300 dark:bg-gray-600 rounded">⟳</button>
-            <button onClick={() => update({ translateX:0, translateY:0 })} className="px-1 py-0.5 bg-gray-300 dark:bg-gray-600 rounded">Center</button>
             <button onClick={reset} className="px-1 py-0.5 bg-red-500 text-white rounded">Reset</button>
             <button onClick={openSelect} className="px-1 py-0.5 bg-blue-600 text-white rounded">Change</button>
           </div>

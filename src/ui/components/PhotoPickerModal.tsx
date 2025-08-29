@@ -69,13 +69,14 @@ export const CoverPhotoPickerModal: React.FC = () => {
   if (!isOpen || !target) return null;
   const handleSelect = (photoId: string) => {
     if (target === 'front') actions.setFrontCoverPhoto(photoId);
-    else actions.setRearCoverPhoto(photoId);
+    else if (target === 'rear') actions.setRearCoverPhoto(photoId);
+    else if (target === 'legacy') actions.setCoverPhoto(photoId);
     actions.closeCoverPicker();
   };
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" onClick={actions.closeCoverPicker}>
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-4 w-full max-w-3xl max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
-        <h2 className="text-lg font-bold mb-4 text-gray-900 dark:text-gray-100">Select {target === 'front' ? 'Front' : 'Rear'} Cover Photo</h2>
+  <h2 className="text-lg font-bold mb-4 text-gray-900 dark:text-gray-100">Select {target === 'front' ? 'Front' : target === 'rear' ? 'Rear' : 'Cover'} Photo</h2>
         <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4 overflow-auto">
           {photos.map(photo => (
             <button key={photo.id} onClick={() => handleSelect(photo.id)} className="relative group border border-gray-300 dark:border-gray-600 rounded overflow-hidden aspect-square bg-gray-100 dark:bg-gray-700">
