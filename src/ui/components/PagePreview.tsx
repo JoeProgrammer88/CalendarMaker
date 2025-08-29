@@ -61,14 +61,14 @@ export const PagePreview: React.FC = () => {
       let img: React.ReactNode = null;
       if (photo?.previewUrl && monthSlot) {
         const t = monthSlot.transform;
-        // scale & translate (normalized) applied via CSS transform
-        const translateXpx = t.translateX * w;
-        const translateYpx = t.translateY * h;
+        // Match cover photo interaction: anchor at center, start overscaled (130%) so user can see cropping edges, translate in percent of slot size
+        const txPct = (t.translateX || 0) * 100;
+        const tyPct = (t.translateY || 0) * 100;
         const style: React.CSSProperties = {
-          transform: `translate(${translateXpx}px, ${translateYpx}px) scale(${t.scale}) rotate(${t.rotationDegrees}deg)`,
+          transform: `translate(-50%, -50%) translate(${txPct}%, ${tyPct}%) scale(${t.scale || 1}) rotate(${t.rotationDegrees || 0}deg)`,
           transformOrigin: 'center center'
         };
-        img = <img draggable={false} src={photo.previewUrl} alt={photo.name} className="absolute inset-0 w-full h-full object-cover pointer-events-none" style={style} />;
+        img = <img draggable={false} src={photo.previewUrl} alt={photo.name} className="absolute left-1/2 top-1/2 w-[130%] h-[130%] object-cover pointer-events-none" style={style} />;
       }
       const active = slot.slotId === activeSlotId;
       const onPointerDown: React.PointerEventHandler<HTMLDivElement> = (e) => {
@@ -89,6 +89,10 @@ export const PagePreview: React.FC = () => {
           slotWidth: w,
           slotHeight: h,
         };
+        // Lock page scrolling / selection during drag for smoother interaction (mirrors cover preview)
+        document.body.style.overscrollBehavior = 'contain';
+        document.body.style.touchAction = 'none';
+        document.body.style.userSelect = 'none';
       };
       const onPointerMove: React.PointerEventHandler<HTMLDivElement> = (e) => {
         const d = dragRef.current;
@@ -100,7 +104,12 @@ export const PagePreview: React.FC = () => {
         // Update active slot transform with absolute normalized translate values
         updateTransform({ translateX: nx, translateY: ny });
       };
-      const endDrag = () => { dragRef.current.active = false; dragRef.current.pointerId = null; };
+      const endDrag = () => { 
+        dragRef.current.active = false; dragRef.current.pointerId = null; 
+        document.body.style.overscrollBehavior = '';
+        document.body.style.touchAction = '';
+        document.body.style.userSelect = '';
+      };
       const onPointerUp: React.PointerEventHandler<HTMLDivElement> = () => endDrag();
       const onPointerCancel: React.PointerEventHandler<HTMLDivElement> = () => endDrag();
       return (
