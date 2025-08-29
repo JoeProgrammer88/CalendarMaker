@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { computePagePixelSize } from '../../util/pageSize';
+import { CoverPhotoUnifiedPreview } from './CoverPhotoUnifiedPreview';
 import { useCalendarStore } from '../../store/store';
 import { SIZES, LAYOUTS } from '../../util/constants';
 import type { CalendarPageSizeKey, LayoutId } from '../../types';
@@ -15,6 +16,10 @@ export const Sidebar: React.FC = () => {
   showCommonHolidays: s.project.calendar.showCommonHolidays ?? false,
   coverStyle: s.project.calendar.coverStyle ?? 'large-photo',
   coverPhotoId: s.project.calendar.coverPhotoId,
+  frontCoverPhotoId: s.project.calendar.frontCoverPhotoId,
+  rearCoverPhotoId: s.project.calendar.rearCoverPhotoId,
+  frontCoverTransform: s.project.calendar.frontCoverTransform,
+  rearCoverTransform: s.project.calendar.rearCoverTransform,
   coverTransform: s.project.calendar.coverTransform,
     monthIndex: s.ui.activeMonth,
     layout: s.project.calendar.layoutStylePerMonth[s.ui.activeMonth],
@@ -26,8 +31,14 @@ export const Sidebar: React.FC = () => {
   setIncludeCoverPage: s.actions.setIncludeCoverPage,
   setCoverStyle: s.actions.setCoverStyle,
   setCoverPhoto: s.actions.setCoverPhoto,
+  setFrontCoverPhoto: s.actions.setFrontCoverPhoto,
+  setRearCoverPhoto: s.actions.setRearCoverPhoto,
   updateCoverTransform: s.actions.updateCoverTransform,
   resetCoverTransform: s.actions.resetCoverTransform,
+  updateFrontCoverTransform: s.actions.updateFrontCoverTransform,
+  resetFrontCoverTransform: s.actions.resetFrontCoverTransform,
+  updateRearCoverTransform: s.actions.updateRearCoverTransform,
+  resetRearCoverTransform: s.actions.resetRearCoverTransform,
     setLayoutForMonth: s.actions.setLayoutForMonth,
     setActiveMonth: s.actions.setActiveMonth,
   resetProject: s.actions.resetProject,
@@ -80,7 +91,7 @@ export const Sidebar: React.FC = () => {
                 <option value="large-photo">Large Photo (90%)</option>
                 <option value="grid-4x3">4×3 Month Grid</option>
               </select>
-        {state.coverStyle === 'large-photo' && (
+  {state.coverStyle === 'large-photo' && (
                 <div className="mt-2 space-y-2">
                   <div className="text-xs font-medium">Cover Photo</div>
                   <div className="grid grid-cols-3 gap-2">
@@ -109,15 +120,11 @@ export const Sidebar: React.FC = () => {
                     <input type="file" accept="image/*" multiple className="hidden" onChange={e => { if (e.target.files) useCalendarStore.getState().actions.addCoverPhotos(e.target.files); e.target.value=''; }} />
                     <div className="border border-dashed border-gray-400 dark:border-gray-600 rounded p-2 text-center text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-900">Click to choose</div>
                   </label>
-          {state.coverPhotoId && (
-                    <div>
-                      <div className="text-[11px] mb-1 text-gray-600 dark:text-gray-300">Selected cover preview</div>
-            <CoverPreview photoId={state.coverPhotoId} />
-                      <div className="mt-2">
-                        <button type="button" onClick={() => state.setCoverPhoto(null)} className="text-xs text-red-600 hover:underline">Clear cover photo</button>
-                      </div>
-                    </div>
-                  )}
+          <div className="space-y-4">
+              <CoverPhotoUnifiedPreview which="legacy" label="Legacy Cover" />
+              <CoverPhotoUnifiedPreview which="front" label="Front (inverted)" />
+              <CoverPhotoUnifiedPreview which="rear" label="Rear" />
+            </div>
                 </div>
               )}
             </label>
@@ -163,6 +170,9 @@ export const Sidebar: React.FC = () => {
     </aside>
   );
 };
+
+// Provide a default export too (some bundlers / HMR edge cases were not seeing the named export)
+export default Sidebar;
 
 // Interactive cover preview with pan/zoom/rotate controls (normalized like month slots)
 const CoverPreview: React.FC<{ photoId: string }> = ({ photoId }) => {
@@ -340,3 +350,5 @@ const PhotoList: React.FC = () => {
     </div>
   );
 };
+
+

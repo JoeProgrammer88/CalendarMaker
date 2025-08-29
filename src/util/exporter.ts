@@ -1,4 +1,4 @@
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { PDFDocument, StandardFonts, rgb, degrees } from 'pdf-lib';
 // @ts-ignore - fontkit types not provided by default
 import fontkit from '@pdf-lib/fontkit';
 import type { ProjectState } from '../types';
@@ -497,4 +497,203 @@ function parseHexColor(hex?: string) {
     return rgb(r,g,b);
   }
   return rgb(0,0,0);
+}
+
+// Foldable calendar export per FoldableSpecs.md
+// The spec defines a custom print order of months (some upside-down) plus cover.
+// We implement by reusing the normal month rendering path but optionally rotating
+// pages 180 degrees when they are designated "print upside-down" and by mapping
+// the requested month index relative to the project's start month.
+// Special month indices:
+//  - Month -1 represents the month before the starting month.
+//  - Cover page (page 14) includes existing cover layout but arranged with front (top, inverted) and back (bottom) placeholders/photos.
+// For MVP we will: reuse existing cover export for cover (no dual photo) and simply append it last.
+// Pages requiring upside-down print will be rotated by 180 degrees (content drawn normally then rotated). For simplicity we render onto a separate page and rotate at end.
+export async function exportAsPdfFoldable(project: ProjectState, onProgress?: (p: number) => void) {
+  // Disallow 5x7 per requirement (UI should prevent calling; safeguard here too)
+  if (project.calendar.pageSize === '5x7') throw new Error('Foldable export not supported for 5x7');
+  const pdf = await PDFDocument.create();
+  try { (pdf as any).registerFontkit?.(fontkit); } catch {}
+  const font = await embedSelectedFont(pdf, project.calendar.fontFamily);
+
+  interface PageSpec { label: string; monthOffset: number | null; upsideDown?: boolean; }
+  // Build ordered spec list (excluding final cover which we'll treat separately)
+  const pageSpecs: PageSpec[] = [
+    { label: 'Month 6', monthOffset: 5, upsideDown: false }, // bottom
+    { label: 'Month 5', monthOffset: 4, upsideDown: true },
+    { label: 'Month 7', monthOffset: 6, upsideDown: false },
+    { label: 'Month 4', monthOffset: 3, upsideDown: true },
+    { label: 'Month 8', monthOffset: 7, upsideDown: false },
+    { label: 'Month 3', monthOffset: 2, upsideDown: true },
+    { label: 'Month 9', monthOffset: 8, upsideDown: false },
+    { label: 'Month 2', monthOffset: 1, upsideDown: true },
+    { label: 'Month 10', monthOffset: 9, upsideDown: false },
+    { label: 'Month 1', monthOffset: 0, upsideDown: true },
+    { label: 'Month 11', monthOffset: 10, upsideDown: false },
+    { label: 'Month -1', monthOffset: -1, upsideDown: true },
+    { label: 'Month 12', monthOffset: 11, upsideDown: false }
+  ];
+  // Filter by actual number of months in project (months beyond range skipped, except -1 if valid)
+  const monthsCount = project.calendar.months;
+  const validSpecs = pageSpecs.filter(ps => {
+    if (ps.monthOffset === -1) return true; // allow attempt; we will synthesize prior month grid
+    return ps.monthOffset! >= 0 && ps.monthOffset! < monthsCount;
+  });
+  const hasCover = !!project.calendar.includeCoverPage; // cover appended after foldable pages
+  const totalPages = validSpecs.length + (hasCover ? 1 : 0);
+  let pageCounter = 0;
+
+  for (const ps of validSpecs) {
+    const { pageSize, orientation, splitDirection } = project.calendar;
+    const pt = computePagePixelSize(pageSize, orientation, 72);
+    const px = computePagePixelSize(pageSize, orientation, 300);
+    const page = pdf.addPage([pt.width, pt.height]);
+    const { width, height } = page.getSize();
+    let monthIndex = ps.monthOffset!; // may be -1
+    // Compute real calendar month/year and layout index (clamp for -1)
+    const startMonth = project.calendar.startMonth;
+    const startYear = project.calendar.startYear;
+    let realMonth0: number; let realYear: number; let layoutIdx: number;
+    if (monthIndex === -1) {
+      // month before start
+      const beforeTotal = startMonth - 1;
+      realMonth0 = (beforeTotal + 12) % 12;
+      realYear = startYear + Math.floor((startMonth - 1) / 12); // integer division toward zero is fine for positive years
+      layoutIdx = 0; // reuse first layout pattern
+    } else {
+      const totalOffset = startMonth + monthIndex;
+      realMonth0 = totalOffset % 12;
+      realYear = startYear + Math.floor(totalOffset / 12);
+      layoutIdx = monthIndex;
+    }
+    const layoutId = project.calendar.layoutStylePerMonth[Math.max(0, Math.min(project.calendar.layoutStylePerMonth.length - 1, layoutIdx))];
+    const layout = getEffectiveLayout(layoutId, splitDirection)!;
+    // Photo slots (synthesizing empty for -1)
+    if (monthIndex >= 0) {
+      const monthPage = project.monthData[monthIndex];
+      for (const slot of layout.slots) {
+        const slotPointW = slot.rect.w * width;
+        const slotPointH = slot.rect.h * height;
+        const slotPixelW = Math.max(1, Math.round(slot.rect.w * px.width));
+        const slotPixelH = Math.max(1, Math.round(slot.rect.h * px.height));
+        const s = monthPage.slots.find(ss => ss.slotId === slot.slotId);
+        const photo = s?.photoId ? project.photos.find(p => p.id === s.photoId) : undefined;
+        const x = slot.rect.x * width;
+        const y = height - (slot.rect.y * height) - slotPointH;
+        if (!s || !photo?.previewUrl) {
+          page.drawRectangle({ x, y, width: slotPointW, height: slotPointH, borderColor: rgb(0.3,0.5,0.9), borderWidth: 1 });
+        } else {
+          const img = await loadImage(photo.previewUrl);
+            const canvas = document.createElement('canvas');
+            canvas.width = slotPixelW; canvas.height = slotPixelH;
+            const ctx = canvas.getContext('2d')!;
+            ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+            const t = s.transform;
+            const baseScale = Math.max(slotPixelW / img.width, slotPixelH / img.height);
+            const scale = baseScale * (t.scale || 1);
+            const tx = (t.translateX || 0) * slotPixelW;
+            const ty = (t.translateY || 0) * slotPixelH;
+            const rad = (t.rotationDegrees || 0) * Math.PI/180;
+            ctx.save(); ctx.translate(slotPixelW/2 + tx, slotPixelH/2 + ty); if (rad) ctx.rotate(rad); ctx.scale(scale, scale); ctx.drawImage(img, -img.width/2, -img.height/2); ctx.restore();
+            const png = await canvasToPngBytes(canvas);
+            const embedded = await pdf.embedPng(png);
+            page.drawImage(embedded, { x, y, width: slotPointW, height: slotPointH });
+        }
+      }
+    }
+    // Calendar grid (reuse logic simplified from standard export)
+    const g = layout.grid;
+    const baseGx = g.x * width;
+    const baseGy = height - (g.y * height) - (g.h * height);
+    const baseGw = g.w * width;
+    const baseGh = g.h * height;
+    const safeInset = 0.125 * 72;
+    const gx = baseGx + safeInset;
+    const gy = baseGy + safeInset;
+    const gw = Math.max(10, baseGw - safeInset * 2);
+    const gh = Math.max(10, baseGh - safeInset * 2);
+    const columns = 7;
+    const cellH = gh / 7; // header + 6 weeks
+    const cellW = gw / columns;
+    // Month label
+    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const monthLabel = `${monthNames[realMonth0]} ${realYear}`;
+    page.drawRectangle({ x: gx, y: gy + gh - cellH, width: gw, height: cellH, color: rgb(0.96,0.96,0.96) });
+    const labelSize = 16; const labelWidth = font.widthOfTextAtSize(monthLabel, labelSize);
+    page.drawText(monthLabel, { x: gx + (gw - labelWidth)/2, y: gy + gh - labelSize - 2, size: labelSize, font, color: rgb(0,0,0) });
+    const weekDayLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    weekDayLabels.forEach((d,i)=>{ const cx = gx + i*cellW; page.drawText(d, { x: cx + 4, y: gy + gh - cellH + 8, size:10, font, color: rgb(0,0,0) }); });
+    for (let r=0;r<=7;r++){ if (r===7) continue; const y = gy + r*cellH; page.drawLine({ start:{x:gx,y}, end:{x:gx+gw,y}, thickness:0.5, color: rgb(0.8,0.8,0.8)}); }
+    const headerBottomY = gy + gh - cellH;
+    for (let c=0;c<=columns;c++){ const x = gx + c*cellW; page.drawLine({ start:{x,y:gy}, end:{x,y:headerBottomY}, thickness:0.5, color: rgb(0.8,0.8,0.8)}); }
+    // days
+    const grid = generateMonthGrid(realYear, realMonth0);
+    const events = project.events.filter(e => e.visible && e.dateISO.startsWith(`${realYear}-${String(realMonth0+1).padStart(2,'0')}`));
+    for (let w=0; w<grid.weeks.length; w++) {
+      const week = grid.weeks[w];
+      for (let d=0; d<week.length; d++) {
+        const cell = week[d];
+        const cx = gx + d*cellW;
+        const cy = gy + gh - (w + 2) * cellH;
+        if (cell.inMonth && cell.day) {
+          page.drawText(String(cell.day), { x: cx+4, y: cy + cellH - 14, size:10, font, color: rgb(0,0,0) });
+          const dateISO = `${realYear}-${String(realMonth0+1).padStart(2,'0')}-${String(cell.day).padStart(2,'0')}`;
+          const cellEvents = events.filter(e => e.dateISO === dateISO).slice(0,2);
+          const textSize = 9; const lineHeight = 10; let lineIdx = 0; const maxWidth = cellW - 8;
+          cellEvents.forEach(ev => {
+            const color = parseHexColor(ev.color);
+            const words = ev.text.split(/\s+/); let current=''; const lines:string[]=[];
+            words.forEach(wd=>{ const test = current? current+' '+wd: wd; const widthW = font.widthOfTextAtSize(test, textSize); if (widthW <= maxWidth) current=test; else { if (current) lines.push(current); current=wd; } }); if (current) lines.push(current);
+            lines.slice(0,2).forEach(line=>{ const yLine = cy + cellH - 28 - (lineIdx * lineHeight); if (yLine > cy + 2) { page.drawText(line, { x: cx+4, y: yLine, size: textSize, font, color }); lineIdx++; } });
+          });
+        }
+      }
+    }
+    // Rotate page if needed
+    if (ps.upsideDown) {
+      page.setRotation(degrees(180));
+    }
+    pageCounter++; if (onProgress) onProgress(pageCounter / totalPages);
+  }
+  if (hasCover) {
+    // Cover page: top half = front cover (printed upside down), bottom half = rear cover (normal orientation)
+    const { pageSize, orientation } = project.calendar;
+    const pt = computePagePixelSize(pageSize, orientation, 72);
+    const cover = pdf.addPage([pt.width, pt.height]);
+    const { width, height } = cover.getSize();
+    const halfH = height / 2;
+    // Retrieve chosen photos: prefer explicit front/rear, fallback to legacy coverPhotoId for front.
+    const frontId = project.calendar.frontCoverPhotoId || project.calendar.coverPhotoId;
+    const rearId = project.calendar.rearCoverPhotoId;
+    const frontPhoto = frontId ? (project.coverPhotos.find(p => p.id === frontId) || project.photos.find(p => p.id === frontId)) : undefined;
+    const rearPhoto = rearId ? (project.coverPhotos.find(p => p.id === rearId) || project.photos.find(p => p.id === rearId)) : undefined;
+    // Helper to draw a photo scaled cover-fit into area with transform (pan/zoom/rotate)
+    const drawPhoto = async (photo: any, transform: any, x: number, y: number, w: number, h: number, rotate180?: boolean) => {
+      if (!photo?.previewUrl) { cover.drawRectangle({ x, y, width: w, height: h, borderColor: rgb(0.6,0.6,0.6), borderWidth: 1 }); return; }
+      const img = await loadImage(photo.previewUrl);
+      const canvas = document.createElement('canvas');
+      const scaleFactor = 300/72; canvas.width = Math.max(1, Math.round(w * scaleFactor)); canvas.height = Math.max(1, Math.round(h * scaleFactor));
+      const ctx = canvas.getContext('2d')!; ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+      const t = transform || { scale:1, translateX:0, translateY:0, rotationDegrees:0 };
+      const baseScale = Math.max(canvas.width / img.width, canvas.height / img.height);
+      const s = baseScale * (t.scale || 1);
+      const tx = (t.translateX || 0) * canvas.width;
+      const ty = (t.translateY || 0) * canvas.height;
+      const rad = (t.rotationDegrees || 0) * Math.PI/180;
+      ctx.save(); ctx.translate(canvas.width/2 + tx, canvas.height/2 + ty); if (rad) ctx.rotate(rad); ctx.scale(s, s); ctx.drawImage(img, -img.width/2, -img.height/2); ctx.restore();
+      const png = await canvasToPngBytes(canvas); const embedded = await pdf.embedPng(png);
+      if (rotate180) {
+        cover.drawImage(embedded, { x, y: y + h, width: w, height: -h });
+      } else {
+        cover.drawImage(embedded, { x, y, width: w, height: h });
+      }
+    };
+    await drawPhoto(frontPhoto, project.calendar.frontCoverTransform, 0, halfH, width, halfH, true); // top half (inverted)
+    await drawPhoto(rearPhoto, project.calendar.rearCoverTransform, 0, 0, width, halfH, false); // bottom half (normal)
+    pageCounter++; if (onProgress) onProgress(pageCounter / totalPages);
+  }
+  const bytes = await pdf.save();
+  const ab = new ArrayBuffer(bytes.byteLength); new Uint8Array(ab).set(bytes);
+  const blob = new Blob([ab], { type: 'application/pdf' });
+  const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'calendar-foldable.pdf'; a.click(); URL.revokeObjectURL(url);
 }

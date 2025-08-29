@@ -29,12 +29,17 @@ export const RightPanel: React.FC = () => {
 
 const ExportButton: React.FC = () => {
   const exportProject = useCalendarStore(s => s.actions.exportProject);
+  const exportProjectFoldable = useCalendarStore(s => s.actions.exportProjectFoldable);
   const exporting = useCalendarStore(s => s.ui.exporting);
   const progress = useCalendarStore(s => s.ui.exportProgress);
+  const pageSize = useCalendarStore(s => s.project.calendar.pageSize);
   return (
     <div>
       <button disabled={exporting} onClick={exportProject} className="px-3 py-2 rounded bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm w-full">
         {exporting ? `Exporting… ${Math.round(progress*100)}%` : 'Export PDF'}
+      </button>
+      <button disabled={exporting || pageSize === '5x7'} onClick={exportProjectFoldable} className="mt-2 px-3 py-2 rounded bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm w-full">
+        {exporting ? `Exporting… ${Math.round(progress*100)}%` : 'Export PDF Foldable'}
       </button>
       {exporting && (
         <div className="mt-2 h-2 bg-gray-200 dark:bg-gray-700 rounded overflow-hidden">

@@ -19,7 +19,11 @@ export function defaultProject(): ProjectState {
   includeCoverPage: false,
   coverStyle: 'large-photo',
   coverPhotoId: undefined as any,
+  frontCoverPhotoId: undefined as any,
+  rearCoverPhotoId: undefined as any,
   coverTransform: { scale: 1, translateX: 0, translateY: 0, rotationDegrees: 0 },
+  frontCoverTransform: { scale: 1, translateX: 0, translateY: 0, rotationDegrees: 0 },
+  rearCoverTransform: { scale: 1, translateX: 0, translateY: 0, rotationDegrees: 0 },
   fontFamily: 'Inter'
     },
     photos: [],
