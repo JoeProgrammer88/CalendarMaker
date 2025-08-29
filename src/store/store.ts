@@ -170,7 +170,19 @@ export const useCalendarStore = create<StoreShape>()(immer((set, get) => ({
   setFontFamily(font) { set(s => { s.project.calendar.fontFamily = font; }); get().actions.saveNow(); },
   openEventDialog(dateISO, editEventId) { set(s => { s.ui.eventDialog = { open: true, dateISO, editEventId: editEventId ?? null }; }); },
   closeEventDialog() { set(s => { s.ui.eventDialog = { open: false, dateISO: null, editEventId: null }; }); },
-  async exportProject() { if (get().ui.exporting) return; set(s => { s.ui.exporting = true; s.ui.exportProgress = 0; }); try { await exportAsPdf(get().project, (p: number) => { set(s => { s.ui.exportProgress = p; }); }); } finally { set(s => { s.ui.exporting = false; s.ui.exportProgress = 0; }); } },
+  async exportProject() {
+      if (get().ui.exporting) return;
+      set(s => { s.ui.exporting = true; s.ui.exportProgress = 0; });
+      try {
+        await exportAsPdf(get().project, (p: number) => { set(s => { s.ui.exportProgress = p; }); });
+        get().actions.addToast('PDF export complete', 'success');
+      } catch (e:any) {
+        console.error('Export failed', e);
+        get().actions.addToast('PDF export failed', 'error');
+      } finally {
+        set(s => { s.ui.exporting = false; s.ui.exportProgress = 0; });
+      }
+    },
   async exportCurrentMonthPng() { try { const idx = get().ui.activeMonth; await exportCurrentPageAsPng(get().project, idx); } catch (e) { get().actions.addToast('PNG export failed', 'error'); } },
     async addPhotos(files) {
       const arr = Array.from(files);
